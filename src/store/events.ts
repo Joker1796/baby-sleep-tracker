@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { uid, listEvents, putEvent, deleteEvent } from '../db'
 import { touchNow, simNow } from '../time/now'
@@ -91,10 +92,15 @@ export function selectOpenInterval(events: SleepEvent[], type: string): SleepEve
   return [...selectSorted(events)].reverse().find(e => e.type === type && e.endedAt == null) || null
 }
 
+// Подписываемся на стабильную ссылку events, а производную (сортировку/поиск)
+// считаем в useMemo. Иначе селектор вернул бы новый массив на каждый рендер →
+// useSyncExternalStore уходит в бесконечный цикл («Maximum update depth exceeded»).
 export function useSorted(): SleepEvent[] {
-  return useEventsStore(s => selectSorted(s.events))
+  const events = useEventsStore(s => s.events)
+  return useMemo(() => selectSorted(events), [events])
 }
 
 export function useCurrentSleep(): SleepEvent | null {
-  return useEventsStore(s => selectCurrentSleep(s.events))
+  const events = useEventsStore(s => s.events)
+  return useMemo(() => selectCurrentSleep(events), [events])
 }
