@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useActiveChild, useChildrenStore } from '../store/children'
@@ -8,12 +9,14 @@ import { useSorted, useCurrentSleep } from '../store/events'
 import { useSettlingStore } from '../store/settling'
 import { useNow } from '../time/now'
 import { buildGuidance } from '../logic/guidance'
-import { formatDurationMin, plural } from '../logic/age'
+import { formatDurationMin, plural, ageInMonths } from '../logic/age'
+import { sleepVerb, wakeVerb } from '../logic/gender'
 import ChildSwitcher from '../components/ChildSwitcher'
 import SleepButton from '../components/SleepButton'
 import SettlingFlow from '../components/SettlingFlow'
 import DayGreeting from '../components/DayGreeting'
 import EventButtons from '../components/EventButtons'
+import EventEditSheet, { EventModel } from '../components/EventEditSheet'
 import AdviceCard from '../components/AdviceCard'
 import QuickTopics from '../components/QuickTopics'
 import { Card, Btn } from '../components/ui'
@@ -24,6 +27,7 @@ export default function TodayScreen() {
   const { colors } = useTheme()
   const s = useCommonStyles()
   const insets = useSafeAreaInsets()
+  const navigation = useNavigation<any>()
   const child = useActiveChild()
   const events = useSorted()
   const currentSleep = useCurrentSleep()
@@ -34,6 +38,7 @@ export default function TodayScreen() {
   const settling = useSettlingStore.getState
 
   const [toast, setToast] = useState('')
+  const [sheetModel, setSheetModel] = useState<EventModel>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   function showToast(msg: string) {
     setToast(msg)
@@ -71,18 +76,20 @@ export default function TodayScreen() {
   }
 
   const st = advice.state
+  const sleptWord = sleepVerb(child?.gender).toLowerCase()
+  const wokeWord = wakeVerb(child?.gender).toLowerCase()
   let status: { icon: string; title: string; sub: string | null }
   if (st.sleeping) {
-    status = { icon: '😴', title: `Спит ${formatDurationMin(st.sleepingMin)}`, sub: `уснул(а) в ${dayjs(st.sleeping.startedAt).format('HH:mm')}` }
+    status = { icon: '😴', title: `Спит ${formatDurationMin(st.sleepingMin)}`, sub: `${sleptWord} в ${dayjs(st.sleeping.startedAt).format('HH:mm')}` }
   } else if (isNightWaking && st.lastWakeAt != null) {
-    status = { icon: '🌙', title: 'Ночное пробуждение', sub: `проснулся(ась) в ${dayjs(st.lastWakeAt).format('HH:mm')} · уложите обратно` }
+    status = { icon: '🌙', title: 'Ночное пробуждение', sub: `${wokeWord} в ${dayjs(st.lastWakeAt).format('HH:mm')} · уложите обратно` }
   } else if (st.awakeMin != null) {
     status = { icon: '🙂', title: `Бодрствует ${formatDurationMin(st.awakeMin)}`, sub: null }
   } else {
     status = { icon: '🍼', title: 'Нет данных о сне', sub: 'отметьте засыпание и пробуждение' }
   }
 
-  const wokeAtLabel = st.lastWakeAt != null ? `проснулся(ась) в ${dayjs(st.lastWakeAt).format('HH:mm')}` : ''
+  const wokeAtLabel = st.lastWakeAt != null ? `${wokeWord} в ${dayjs(st.lastWakeAt).format('HH:mm')}` : ''
   const rawProgress = advice.wakeProgress
   const progress = rawProgress == null ? null : Math.min(rawProgress, 1.15)
   const left = advice.wakeWindowLeft
@@ -120,6 +127,23 @@ export default function TodayScreen() {
 
         {showGreeting && (
           <DayGreeting greeting={guidance!.greeting} onDismiss={() => settling().dismissGreeting(child.id)} />
+        )}
+
+        {!(child.aids && child.aids.length) && !settling().isAidsHintDismissed(child.id) && (
+          <Card style={[styles.aidsHint, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismissAidsHint(child.id)}>
+              <Ionicons name="close" size={22} color={colors.textSoft} />
+            </Pressable>
+            <Text style={{ fontSize: 24 }}>⚙️</Text>
+            <View style={s.grow}>
+              <Text style={[styles.rowText, { color: colors.text, marginBottom: 6 }]}>
+                Настройте под ребёнка: укачивание, соска, блэкаут и другое — подсказки станут точнее.
+              </Text>
+              <Pressable onPress={() => navigation.navigate('settings')}>
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Открыть настройки →</Text>
+              </Pressable>
+            </View>
+          </Card>
         )}
 
         <Card>
@@ -191,7 +215,7 @@ export default function TodayScreen() {
         )}
 
         {showSleepButton && <SleepButton />}
-        <EventButtons onLogged={showToast} />
+        <EventButtons onLogged={showToast} onEdit={setSheetModel} />
 
         {guidance && guidance.phase === 'active' && (
           <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />
@@ -206,8 +230,12 @@ export default function TodayScreen() {
           </>
         )}
 
-        <Text style={[s.cardTitle, { marginTop: 4 }]}>Быстрые темы</Text>
-        <QuickTopics />
+        {ageInMonths(child.birthDate, now) < 12 && (
+          <>
+            <Text style={[s.cardTitle, { marginTop: 4 }]}>Быстрые темы</Text>
+            <QuickTopics />
+          </>
+        )}
       </ScrollView>
 
       {toast ? (
@@ -215,6 +243,8 @@ export default function TodayScreen() {
           <Text style={{ color: colors.bg, fontWeight: '600', fontSize: 14 }}>{toast}</Text>
         </View>
       ) : null}
+
+      <EventEditSheet model={sheetModel} onClose={() => setSheetModel(null)} />
     </View>
   )
 }
@@ -222,6 +252,7 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   cardClose: { position: 'absolute', top: 6, right: 10, width: 30, height: 30, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   milestone: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
+  aidsHint: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: 1, position: 'relative', paddingRight: 34 },
   milestoneText: { flex: 1, fontSize: 16, fontWeight: '700' },
   statusTitle: { fontSize: 19, fontWeight: '700' },
   regimeToggle: { paddingVertical: 6, paddingHorizontal: 10, minHeight: 30, borderRadius: 999, borderWidth: 1, alignSelf: 'flex-start', justifyContent: 'center' },

@@ -155,7 +155,6 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   function wakeChecklist() {
     if (!isFirstWake) return []
     return [
-      { id: 'wash', type: 'wash', label: 'Умыться', scope: 'day' },
       { id: 'vitaminD', type: 'vitaminD', label: 'Дать витамин D', scope: 'day' }
     ]
   }

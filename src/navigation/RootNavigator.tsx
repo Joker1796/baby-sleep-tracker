@@ -7,8 +7,8 @@ import { useEventsStore } from '../store/events'
 import { useTheme } from '../theme/ThemeProvider'
 import TodayScreen from '../screens/TodayScreen'
 import HistoryScreen from '../screens/HistoryScreen'
+import CalendarScreen from '../screens/CalendarScreen'
 import AdviceScreen from '../screens/AdviceScreen'
-import StatsScreen from '../screens/StatsScreen'
 import RegimeScreen from '../screens/RegimeScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import OnboardingScreen from '../screens/OnboardingScreen'
@@ -72,17 +72,17 @@ export default function RootNavigator() {
         <Tab.Screen
           name="history"
           component={HistoryScreen}
-          options={{ title: 'История', tabBarIcon: tabIcon('calendar') }}
+          options={{ title: 'История', tabBarIcon: tabIcon('time') }}
+        />
+        <Tab.Screen
+          name="calendar"
+          component={CalendarScreen}
+          options={{ title: 'Календарь', tabBarIcon: tabIcon('calendar') }}
         />
         <Tab.Screen
           name="advice"
           component={AdviceScreen}
-          options={{ title: 'Советы', tabBarIcon: tabIcon('bulb') }}
-        />
-        <Tab.Screen
-          name="stats"
-          component={StatsScreen}
-          options={{ title: 'Статистика', tabBarIcon: tabIcon('stats-chart') }}
+          options={{ title: 'Советы', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
         />
         {customRegime && (
           <Tab.Screen

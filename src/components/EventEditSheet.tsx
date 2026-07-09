@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, Pressable, Modal, ScrollView, TextInput, Alert, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useEventsStore, SleepEvent } from '../store/events'
+import { useEventsStore, useSorted, SleepEvent } from '../store/events'
+import { useActiveChild } from '../store/children'
 import { simNow } from '../time/now'
-import { EVENT_TYPES, EVENT_TYPE_LIST } from '../data/eventTypes'
+import { EVENT_TYPES, EVENT_TYPE_LIST, typesForAge } from '../data/eventTypes'
+import { ageInMonths } from '../logic/age'
 import { Btn } from './ui'
 import DateTimeInput from './DateTimeInput'
+import ToothChart from './ToothChart'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
@@ -14,16 +17,32 @@ export type EventModel =
   | (Partial<SleepEvent> & { isNew?: boolean })
   | null
 
-export default function EventEditSheet({ model, onClose }: { model: EventModel; onClose: () => void }) {
+export default function EventEditSheet({
+  model,
+  onClose,
+  types,
+  allowPlan
+}: {
+  model: EventModel
+  onClose: () => void
+  types?: any[]
+  allowPlan?: boolean
+}) {
   const { colors } = useTheme()
   const s = useCommonStyles()
   const insets = useSafeAreaInsets()
+
+  const child = useActiveChild()
+  const allEvents = useSorted()
 
   const [type, setType] = useState('sleep')
   const [startedAt, setStartedAt] = useState(() => new Date())
   const [endedAt, setEndedAt] = useState<Date | null>(null)
   const [hasEnd, setHasEnd] = useState(false)
   const [note, setNote] = useState('')
+  const [amount, setAmount] = useState('')
+  const [planned, setPlanned] = useState(false)
+  const [teeth, setTeeth] = useState<string[]>([])
   const [error, setError] = useState('')
   const isNew = !!model?.isNew
 
@@ -35,10 +54,30 @@ export default function EventEditSheet({ model, onClose }: { model: EventModel; 
     setEndedAt(model.endedAt != null ? new Date(model.endedAt) : null)
     setHasEnd(model.endedAt != null)
     setNote(model.note || '')
+    setAmount(model.amount != null ? String(model.amount) : '')
+    setPlanned(!!model.planned)
+    setTeeth(Array.isArray(model.teeth) ? [...model.teeth] : [])
   }, [model])
 
   const typeDef = (EVENT_TYPES as any)[type] || EVENT_TYPES.sleep
   const isInterval = typeDef.kind === 'interval'
+
+  // Список типов в выпадашке: доступные по возрасту, недавно использованные первыми.
+  const childAgeM = child?.birthDate ? ageInMonths(child.birthDate) : null
+  const typeOptions = useMemo(() => {
+    const last: Record<string, number> = {}
+    for (const e of allEvents) {
+      if (last[e.type] == null || e.startedAt > last[e.type]) last[e.type] = e.startedAt
+    }
+    const base = typesForAge(types || EVENT_TYPE_LIST, childAgeM)
+    return [...base].sort((a: any, b: any) => {
+      const la = last[a.id], lb = last[b.id]
+      if (la != null && lb != null) return lb - la
+      if (la != null) return -1
+      if (lb != null) return 1
+      return 0
+    })
+  }, [allEvents, childAgeM, types])
 
   function toggleEnd() {
     const next = !hasEnd
@@ -53,7 +92,10 @@ export default function EventEditSheet({ model, onClose }: { model: EventModel; 
       setError('Окончание должно быть позже начала')
       return
     }
-    const data = { type, startedAt: startMs, endedAt: endMs, note: note.trim() }
+    const amt = typeDef.amountUnit && amount !== '' ? Number(amount) : null
+    const data: any = { type, startedAt: startMs, endedAt: endMs, note: note.trim(), kind: typeDef.kind, amount: amt }
+    if (allowPlan) data.planned = planned
+    if (type === 'teeth') data.teeth = [...teeth]
     const store = useEventsStore.getState()
     if (isNew) await store.add(data as any)
     else await store.update({ ...(model as SleepEvent), ...data })
@@ -82,11 +124,25 @@ export default function EventEditSheet({ model, onClose }: { model: EventModel; 
           <ScrollView>
             <Text style={[s.h2, { fontSize: 19 }]}>{isNew ? 'Новое событие' : 'Изменить событие'}</Text>
 
+            {allowPlan && (
+              <View style={styles.field}>
+                <Text style={s.label}>Статус</Text>
+                <View style={styles.chips}>
+                  <Pressable onPress={() => setPlanned(false)} style={[s.chip, !planned && s.chipActive]}>
+                    <Text style={[s.chipText, !planned && s.chipActiveText]}>✓ Уже было</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setPlanned(true)} style={[s.chip, planned && s.chipActive]}>
+                    <Text style={[s.chipText, planned && s.chipActiveText]}>🎯 Запланировано</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
             {isNew && (
               <View style={styles.field}>
                 <Text style={s.label}>Тип события</Text>
                 <View style={styles.chips}>
-                  {EVENT_TYPE_LIST.map((t: any) => {
+                  {typeOptions.map((t: any) => {
                     const active = type === t.id
                     return (
                       <Pressable
@@ -124,6 +180,27 @@ export default function EventEditSheet({ model, onClose }: { model: EventModel; 
                   </View>
                 )}
               </>
+            )}
+
+            {typeDef.amountUnit && (
+              <View style={styles.field}>
+                <Text style={s.label}>Количество, {typeDef.amountUnit}</Text>
+                <TextInput
+                  style={s.input}
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.textSoft}
+                />
+              </View>
+            )}
+
+            {type === 'teeth' && (
+              <View style={styles.field}>
+                <Text style={s.label}>Прорезавшиеся зубы · {teeth.length}</Text>
+                <ToothChart value={teeth} onChange={setTeeth} />
+              </View>
             )}
 
             <View style={styles.field}>

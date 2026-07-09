@@ -81,12 +81,12 @@ describe('фазы', () => {
 })
 
 describe('чек-лист бодрствования', () => {
-  it('первое бодрствование дня → умыться + витамин D (без живота)', () => {
+  it('первое бодрствование дня → витамин D (без живота)', () => {
     const events = [sleep('2026-07-03T21:00', '2026-07-04T07:00')] // ночной сон, дневных ещё не было
     const g = buildGuidance({ child, events, now: ts('2026-07-04T07:40') })
     expect(g.phase).toBe('active')
     const ids = g.wakeChecklist.map(i => i.id)
-    expect(ids).toEqual(['wash', 'vitaminD'])
+    expect(ids).toEqual(['vitaminD'])
   })
 
   it('после первого дневного сна → чек-лист пустой', () => {

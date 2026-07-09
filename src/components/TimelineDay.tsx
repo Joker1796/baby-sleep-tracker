@@ -6,22 +6,11 @@ import { useSorted, SleepEvent } from '../store/events'
 import { useActiveChild } from '../store/children'
 import { useNow } from '../time/now'
 import { EVENT_TYPES } from '../data/eventTypes'
-import { formatDurationMin } from '../logic/age'
+import { formatDurationMin, plural } from '../logic/age'
 import { poopVerb } from '../logic/gender'
+import { analyzeDay } from '../logic/sleepAnalyzer'
 import { useTheme } from '../theme/ThemeProvider'
-
-// Цвета типов событий заданы в data как CSS-переменные ('var(--c-...)').
-// Мапим их на палитру темы.
-const COLOR_KEY: Record<string, [string, string]> = {
-  sleep: ['sleep', 'sleepSoft'],
-  walk: ['walk', 'walkSoft'],
-  bath: ['bath', 'bathSoft'],
-  tummy: ['primary', 'primarySoft'],
-  poop: ['walk', 'walkSoft'],
-  medicine: ['medicine', 'medicineSoft'],
-  wash: ['bath', 'bathSoft'],
-  vitaminD: ['warn', 'warnSoft']
-}
+import { eventColors } from '../theme/eventColor'
 
 export default function TimelineDay({
   dayTs,
@@ -38,23 +27,39 @@ export default function TimelineDay({
   const typeOf = (e: SleepEvent) =>
     (EVENT_TYPES as any)[e.type] || { label: e.type, icon: '❓', kind: 'point' }
 
-  const softColor = (e: SleepEvent) => {
-    const key = COLOR_KEY[e.type]
-    return key ? (colors as any)[key[1]] : colors.surface2
-  }
+  const softColor = (e: SleepEvent) => eventColors(colors, e.type).soft
 
   const from = dayjs(dayTs).startOf('day').valueOf()
   const to = dayjs(dayTs).endOf('day').valueOf()
-  const dayEvents = events
-    .filter(e => {
-      const end = e.endedAt ?? ((EVENT_TYPES as any)[e.type]?.kind === 'interval' ? now : e.startedAt)
-      return e.startedAt <= to && end >= from
-    })
-    .reverse()
+  // Хронологический порядок: раннее сверху, позднее снизу
+  const dayEvents = events.filter(e => {
+    const end = e.endedAt ?? ((EVENT_TYPES as any)[e.type]?.kind === 'interval' ? now : e.startedAt)
+    return e.startedAt <= to && end >= from
+  })
+
+  // Порядковые номера ТОЛЬКО дневных снов (nap) — для подписи «Сон N».
+  const napNo: Record<string, number> = {}
+  analyzeDay(events, dayTs, now).naps.forEach((s: SleepEvent, i: number) => {
+    napNo[s.id] = i + 1
+  })
 
   function labelOf(e: SleepEvent) {
     if (e.type === 'poop') return poopVerb(child?.gender)
+    if (e.type === 'sleep' && napNo[e.id]) return `Сон ${napNo[e.id]}`
     return typeOf(e).label
+  }
+
+  function amountLabel(e: SleepEvent) {
+    const unit = (EVENT_TYPES as any)[e.type]?.amountUnit
+    return unit != null && e.amount != null ? `${e.amount} ${unit}` : ''
+  }
+
+  function teethLabel(e: SleepEvent) {
+    if (e.type === 'teeth' && Array.isArray(e.teeth) && e.teeth.length) {
+      const n = e.teeth.length
+      return `🦷 ${n} ${plural(n, 'зуб', 'зуба', 'зубов')}`
+    }
+    return ''
   }
 
   function timeLabel(e: SleepEvent) {
@@ -98,6 +103,8 @@ export default function TimelineDay({
               <Text style={[styles.time, { color: colors.textSoft }]}>
                 {timeLabel(e)}
                 {dur ? ` · ${dur}` : ''}
+                {amountLabel(e) ? ` · ${amountLabel(e)}` : ''}
+                {teethLabel(e) ? ` · ${teethLabel(e)}` : ''}
               </Text>
               {e.note ? <Text style={[styles.time, { color: colors.textSoft }]}>{e.note}</Text> : null}
             </View>

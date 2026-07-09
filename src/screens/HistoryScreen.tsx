@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useSorted } from '../store/events'
@@ -11,8 +10,10 @@ import { analyzeDay } from '../logic/sleepAnalyzer'
 import { formatDurationMin, plural } from '../logic/age'
 import { dayCount, dayTotalMin } from '../logic/eventStats'
 import { poopVerb } from '../logic/gender'
+import { EVENT_TYPES, NON_SLEEP_TYPE_LIST, eventKind } from '../data/eventTypes'
 import TimelineDay from '../components/TimelineDay'
 import EventEditSheet, { EventModel } from '../components/EventEditSheet'
+import StatsSection from '../components/StatsSection'
 import { Card, Btn } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -21,21 +22,39 @@ export default function HistoryScreen() {
   const { colors } = useTheme()
   const s = useCommonStyles()
   const insets = useSafeAreaInsets()
-  const navigation = useNavigation<any>()
   const events = useSorted()
   const child = useActiveChild()
   const now = useNow()
 
   const [dayOffset, setDayOffset] = useState(0)
   const [sheetModel, setSheetModel] = useState<EventModel>(null)
+  const [showMore, setShowMore] = useState(false)
 
   const dayTs = dayjs(now).startOf('day').add(dayOffset, 'day').valueOf()
   const dayLabel = dayOffset === 0 ? 'Сегодня' : dayOffset === -1 ? 'Вчера' : dayjs(dayTs).format('D MMMM, dd')
 
   const summary = analyzeDay(events, dayTs, now)
-  const tummyMin = dayTotalMin(events, 'tummy', dayTs, now)
-  const poopCount = dayCount(events, 'poop', dayTs)
   const poopWord = poopVerb(child?.gender)
+
+  // Строки по типам событий, реально отмеченным в этот день (кроме сна).
+  const otherStats = NON_SLEEP_TYPE_LIST.map((t: any) => {
+    const evs = events.filter(e => e.type === t.id && !e.planned && dayjs(e.startedAt).isSame(dayjs(dayTs), 'day'))
+    if (!evs.length) return null
+    const label = t.id === 'poop' ? poopWord : t.btnLabel || t.label
+    let value: string
+    if (t.amountUnit && t.amountAgg === 'sum') {
+      value = `${evs.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} ${t.amountUnit}`
+    } else if (t.amountUnit && t.amountAgg === 'last') {
+      const withAmt = evs.filter(e => e.amount != null)
+      value = withAmt.length ? `${withAmt[withAmt.length - 1].amount} ${t.amountUnit}` : `${evs.length} ${plural(evs.length, 'раз', 'раза', 'раз')}`
+    } else if (evs.some(e => eventKind(e) === 'interval')) {
+      value = formatDurationMin(dayTotalMin(events, t.id, dayTs, now))
+    } else {
+      const n = dayCount(events, t.id, dayTs)
+      value = `${n} ${plural(n, 'раз', 'раза', 'раз')}`
+    }
+    return { id: t.id, label: `${(EVENT_TYPES as any)[t.id].icon} ${label}`, value }
+  }).filter(Boolean) as { id: string; label: string; value: string }[]
 
   function addEvent() {
     const base = dayOffset === 0 ? simNow() : dayjs(dayTs).add(12, 'hour').valueOf()
@@ -63,25 +82,34 @@ export default function HistoryScreen() {
         </View>
 
         <Card>
-          <Report label="Всего сна" value={formatDurationMin(summary.totalSleepMin)} colors={colors} />
-          <Report label="Ночной сон" value={formatDurationMin(summary.nightSleepMin)} colors={colors} />
+          <Text style={[s.cardTitle, { marginBottom: 8 }]}>Сводка за день</Text>
+          <Report
+            label="Среднее бодрствование"
+            value={summary.wakeWindowMin > 0 ? formatDurationMin(summary.wakeWindowMin) : '—'}
+            colors={colors}
+          />
           <Report
             label="Дневной сон"
             value={`${formatDurationMin(summary.daySleepMin)} · ${summary.napCount} ${plural(summary.napCount, 'сон', 'сна', 'снов')}`}
             colors={colors}
           />
-          <Report label="👶 На животе" value={tummyMin > 0 ? formatDurationMin(tummyMin) : '—'} colors={colors} />
-          <Report label={`💩 ${poopWord}`} value={`${poopCount} ${plural(poopCount, 'раз', 'раза', 'раз')}`} colors={colors} />
-          <Btn
-            title="🗓️ Построить расписание на завтра"
-            variant="secondary"
-            block
-            onPress={() => navigation.navigate('stats', { schedule: true })}
-            style={{ marginTop: 12 }}
-          />
+          <Report label="Ночной сон" value={formatDurationMin(summary.nightSleepMin)} colors={colors} />
+          <Report label="Всего сна" value={formatDurationMin(summary.totalSleepMin)} colors={colors} />
+          {showMore && otherStats.map(r => <Report key={r.id} label={r.label} value={r.value} colors={colors} />)}
+          {otherStats.length > 0 && (
+            <Pressable onPress={() => setShowMore(v => !v)} style={[styles.moreBtn, { borderTopColor: colors.border }]}>
+              <Ionicons name={showMore ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.textSoft} />
+              <Text style={{ color: colors.textSoft, fontSize: 13, fontWeight: '600' }}>
+                {showMore ? 'Свернуть' : `Ещё ${otherStats.length} ${plural(otherStats.length, 'событие', 'события', 'событий')}`}
+              </Text>
+            </Pressable>
+          )}
         </Card>
 
+        <StatsSection />
+
         <Card>
+          <Text style={[s.cardTitle, { marginBottom: 10 }]}>История событий</Text>
           <TimelineDay dayTs={dayTs} onEdit={e => setSheetModel(e)} />
           <Btn title="+ Добавить событие" variant="secondary" block onPress={addEvent} style={{ marginTop: 10 }} />
         </Card>
@@ -117,5 +145,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1
   },
-  repRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 3.5 }
+  repRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 3.5 },
+  moreBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1 }
 })

@@ -9,7 +9,8 @@ export const GENDERS = [
 export const FEEDING_TYPES = [
   { id: 'breast', label: 'Грудное', short: 'ГВ', icon: '🤱' },
   { id: 'formula', label: 'Смесь', short: 'ИВ', icon: '🍼' },
-  { id: 'mixed', label: 'Смешанное', short: 'СВ', icon: '🤱+🍼' }
+  { id: 'mixed', label: 'Смешанное', short: 'СВ', icon: '🤱+🍼' },
+  { id: 'food', label: 'Еда', short: 'Прикорм', icon: '🥣' }
 ]
 
 export const SLEEP_AIDS = [

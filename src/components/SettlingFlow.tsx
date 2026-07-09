@@ -1,10 +1,14 @@
 import React, { useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useEventsStore } from '../store/events'
+import dayjs from 'dayjs'
+import { useEventsStore, useSorted } from '../store/events'
 import { useSettlingStore } from '../store/settling'
-import { useActiveChild } from '../store/children'
+import { useActiveChild, useChildrenStore } from '../store/children'
+import { useNow } from '../time/now'
 import { sleepVerb } from '../logic/gender'
+import { formatDurationMin } from '../logic/age'
+import { EVENT_TYPES, CALENDAR_TYPE_IDS } from '../data/eventTypes'
 import { Card, Btn } from './ui'
 import WakeChecklist from './WakeChecklist'
 import { useTheme } from '../theme/ThemeProvider'
@@ -28,6 +32,38 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
   const phase = guidance.phase
   const sleepWord = sleepVerb(child?.gender)
   const [openActivity, setOpenActivity] = useState<number | null>(null)
+  const [plansExpanded, setPlansExpanded] = useState(false)
+
+  const now = useNow()
+  const events = useSorted()
+  const childCount = useChildrenStore(st => st.children.length)
+
+  // Запланированные события календаря активного ребёнка ТОЛЬКО за сегодня.
+  const dayStart = dayjs(now).startOf('day').valueOf()
+  const dayEnd = dayjs(now).endOf('day').valueOf()
+  const plannedEvents =
+    phase === 'active'
+      ? events
+          .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= dayStart && e.startedAt <= dayEnd)
+          .sort((a, b) => a.startedAt - b.startedAt)
+      : []
+  const visiblePlanned = plansExpanded ? plannedEvents : plannedEvents.slice(0, 3)
+
+  // Напоминание за 2 часа (только при нескольких детях)
+  const soon =
+    childCount > 1
+      ? plannedEvents.find(e => e.startedAt >= now && e.startedAt <= now + 2 * 60 * 60 * 1000)
+      : null
+  const soonInfo = soon
+    ? {
+        icon: (EVENT_TYPES as any)[soon.type]?.icon || '📌',
+        label: (EVENT_TYPES as any)[soon.type]?.label || soon.type,
+        hhmm: dayjs(soon.startedAt).format('HH:mm'),
+        inMin: Math.round((soon.startedAt - now) / 60000)
+      }
+    : null
+
+  const headline = phase === 'active' && plannedEvents.length ? 'Планы' : guidance.headline
 
   const toneColor =
     phase === 'time-to-sleep' ? colors.urgent : phase === 'wind-down' || phase === 'settling' ? colors.warn : colors.primary
@@ -58,7 +94,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
     <Card style={[styles.flow, { borderLeftColor: toneColor }]}>
       <View style={styles.head}>
         <Text style={styles.icon}>{icon}</Text>
-        <Text style={[styles.title, { color: colors.text }]}>{guidance.headline}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{headline}</Text>
       </View>
 
       {guidance.lines.map((line: string, i: number) => (
@@ -95,6 +131,41 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
 
       {guidance.wakeChecklist.length > 0 && (
         <WakeChecklist items={guidance.wakeChecklist} wakeSince={guidance.wakeSince} />
+      )}
+
+      {/* Напоминание за 2 часа (при нескольких детях) */}
+      {soonInfo && (
+        <View style={[styles.soon, { backgroundColor: colors.warnSoft, borderColor: colors.warn }]}>
+          <Text style={{ color: colors.warn, fontSize: 13, fontWeight: '600' }}>
+            🔔 Через ~{formatDurationMin(soonInfo.inMin)}: {soonInfo.icon} {soonInfo.label} ({soonInfo.hhmm}) — планируйте бодрствование.
+          </Text>
+        </View>
+      )}
+
+      {/* Запланированные события календаря на сегодня */}
+      {plannedEvents.length > 0 && (
+        <View style={styles.planBlock}>
+          <Text style={[styles.planCap, { color: colors.textSoft }]}>🗓️ Из календаря на сегодня</Text>
+          {visiblePlanned.map(e => (
+            <View key={e.id} style={[styles.planLine, { borderBottomColor: colors.border }]}>
+              <Text style={{ fontSize: 18 }}>{(EVENT_TYPES as any)[e.type]?.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: colors.text }}>
+                {(EVENT_TYPES as any)[e.type]?.label || e.type}
+                {e.note ? ` · ${e.note}` : ''}
+              </Text>
+              <Text style={{ fontSize: 13, color: e.startedAt < now ? colors.urgent : colors.textSoft }}>
+                {dayjs(e.startedAt).format('HH:mm')}
+              </Text>
+            </View>
+          ))}
+          {plannedEvents.length > 3 && (
+            <Pressable onPress={() => setPlansExpanded(v => !v)} style={{ marginTop: 6 }}>
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
+                {plansExpanded ? 'Свернуть' : `Ещё ${plannedEvents.length - 3}`}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       {/* Продление сна */}
@@ -182,5 +253,9 @@ const styles = StyleSheet.create({
   locBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: 52, borderRadius: radiusSm, borderWidth: 1 },
   locIcon: { fontSize: 22 },
   locLabel: { fontSize: 15, fontWeight: '600' },
-  backBtn: { width: 40, height: 40, marginTop: 10, borderRadius: radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }
+  backBtn: { width: 40, height: 40, marginTop: 10, borderRadius: radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  soon: { marginVertical: 6, padding: 10, borderRadius: radiusSm, borderWidth: 1 },
+  planBlock: { marginVertical: 4, marginBottom: 10 },
+  planCap: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  planLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderBottomWidth: 1 }
 })

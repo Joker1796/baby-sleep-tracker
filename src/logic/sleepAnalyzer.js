@@ -94,13 +94,22 @@ export function analyzeDay(events, dateTs, now = Date.now()) {
   )
   const nightSleepMin = Math.max(0, totalSleepMin - daySleepMin)
 
+  // Среднее время бодрствования за день: дневное окно минус дневной сон,
+  // делённое на число промежутков бодрствования (napCount + 1).
+  const dayToEff = Math.min(dayTo, now, dayEnd.valueOf())
+  const awakeMin = Math.max(0, (dayToEff - dayFrom) / 60000 - daySleepMin)
+  const wakeWindowMin = totalSleepMin > 0 && awakeMin > 0
+    ? Math.round(awakeMin / (naps.length + 1)) : 0
+
   return {
     sessions,
     naps,
     napCount: naps.length,
     daySleepMin: Math.round(daySleepMin),
     nightSleepMin: Math.round(nightSleepMin),
-    totalSleepMin: Math.round(totalSleepMin)
+    totalSleepMin: Math.round(totalSleepMin),
+    awakeMin: Math.round(awakeMin),
+    wakeWindowMin
   }
 }
 

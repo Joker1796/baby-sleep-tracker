@@ -8,6 +8,7 @@ const DISMISS_KEY = 'greetingDismissed'
 const MILESTONE_KEY = 'milestoneDismissed'
 const ADVICE_KEY = 'adviceDismissed'
 const ENCOURAGE_KEY = 'encouragementDismissed'
+const AIDS_KEY = 'aidsHintDismissed'
 
 type Dict = Record<string, any>
 
@@ -18,6 +19,7 @@ interface SettlingState {
   milestoneDismissed: Dict
   adviceDismissed: Dict
   encouragementDismissed: Dict
+  aidsHintDismissed: Dict
   load: () => Promise<void>
   get: (childId: string) => any
   getExtension: (childId: string) => any
@@ -34,6 +36,8 @@ interface SettlingState {
   isEncouragementDismissed: (childId: string) => boolean
   dismissAdvice: (childId: string, adviceId: string) => void
   isAdviceDismissed: (childId: string, adviceId: string) => boolean
+  dismissAidsHint: (childId: string) => void
+  isAidsHintDismissed: (childId: string) => boolean
 }
 
 // Эфемерная сессия «укладывания» на ребёнка: когда начата и где укладывают.
@@ -45,18 +49,20 @@ export const useSettlingStore = create<SettlingState>((set, get) => ({
   milestoneDismissed: {},
   adviceDismissed: {},
   encouragementDismissed: {},
+  aidsHintDismissed: {},
 
   async load() {
-    const [sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed] =
+    const [sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed, aidsHintDismissed] =
       await Promise.all([
         loadJSON<Dict>(KEY, {}),
         loadJSON<Dict>(EXT_KEY, {}),
         loadJSON<Dict>(DISMISS_KEY, {}),
         loadJSON<Dict>(MILESTONE_KEY, {}),
         loadJSON<Dict>(ADVICE_KEY, {}),
-        loadJSON<Dict>(ENCOURAGE_KEY, {})
+        loadJSON<Dict>(ENCOURAGE_KEY, {}),
+        loadJSON<Dict>(AIDS_KEY, {})
       ])
-    set({ sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed })
+    set({ sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed, aidsHintDismissed })
   },
 
   get(childId) {
@@ -140,5 +146,13 @@ export const useSettlingStore = create<SettlingState>((set, get) => ({
     const entry = get().adviceDismissed[childId]
     if (!entry || typeof entry !== 'object') return false
     return entry.date === new Date(simNow()).toDateString() && entry.ids.includes(adviceId)
+  },
+  dismissAidsHint(childId) {
+    const aidsHintDismissed = { ...get().aidsHintDismissed, [childId]: new Date(simNow()).toDateString() }
+    set({ aidsHintDismissed })
+    saveJSON(AIDS_KEY, aidsHintDismissed)
+  },
+  isAidsHintDismissed(childId) {
+    return get().aidsHintDismissed[childId] === new Date(simNow()).toDateString()
   }
 }))

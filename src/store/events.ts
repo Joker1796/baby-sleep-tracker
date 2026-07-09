@@ -10,6 +10,10 @@ export type SleepEvent = {
   startedAt: number
   endedAt: number | null
   note: string
+  amount?: number | null
+  kind?: string
+  planned?: boolean
+  teeth?: string[]
 }
 
 interface EventsState {

@@ -1,12 +1,9 @@
 import React, { useState } from 'react'
 import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
-import { useChildrenStore, Child } from '../store/children'
+import { useChildrenStore, useActiveChild, Child } from '../store/children'
 import { useEventsStore } from '../store/events'
 import { useSettingsStore, ThemePref } from '../store/settings'
-import { formatAge } from '../logic/age'
-import { getFeeding, getAid } from '../data/childOptions'
 import { exportBackup, importBackup } from '../utils/backup'
 import ChildForm from '../components/ChildForm'
 import { Card, Btn } from '../components/ui'
@@ -24,12 +21,21 @@ export default function SettingsScreen() {
   const s = useCommonStyles()
   const insets = useSafeAreaInsets()
   const children = useChildrenStore(st => st.children)
+  const activeChild = useActiveChild()
   const theme = useSettingsStore(st => st.theme)
   const setTheme = useSettingsStore(st => st.setTheme)
 
-  // null | 'new' | child.id
-  const [editing, setEditing] = useState<string | null>(null)
+  // Вкладка: child.id | 'new' | null (авто → активный ребёнок)
+  const [tab, setTab] = useState<string | null>(() => useChildrenStore.getState().activeChildId)
   const [message, setMessage] = useState('')
+
+  const showNew = tab === 'new' || children.length === 0
+  const selectedChild = children.find(c => c.id === tab) || activeChild
+
+  const regimeMode = selectedChild?.regime?.mode || 'auto'
+  function toggleRegime() {
+    if (selectedChild) useChildrenStore.getState().setRegimeMode(selectedChild.id, regimeMode === 'custom' ? 'auto' : 'custom')
+  }
 
   async function reloadActive() {
     const active = useChildrenStore.getState()
@@ -46,6 +52,7 @@ export default function SettingsScreen() {
         onPress: async () => {
           await useChildrenStore.getState().remove(child.id)
           await reloadActive()
+          setTab(null)
         }
       }
     ])
@@ -76,46 +83,79 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <Card>
           <Text style={s.cardTitle}>Дети</Text>
-          {children.map(child => {
-            const feeding = getFeeding(child.feeding)
-            const aidIcons = (child.aids || []).map((id: string) => getAid(id)?.icon).filter(Boolean).join(' ')
-            if (editing === child.id) {
+          {/* Цветные вкладки детей + «＋» */}
+          <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
+            {children.map(child => {
+              const active = !showNew && selectedChild?.id === child.id
               return (
-                <View key={child.id} style={[styles.editBox, { borderBottomColor: colors.border }]}>
-                  <ChildForm child={child} onSaved={() => setEditing(null)} onCancel={() => setEditing(null)} />
-                </View>
+                <Pressable
+                  key={child.id}
+                  onPress={() => setTab(child.id)}
+                  style={[
+                    styles.tab,
+                    { borderColor: colors.border, backgroundColor: colors.surface2 },
+                    active && { backgroundColor: child.color, borderColor: child.color }
+                  ]}
+                >
+                  <Text style={{ fontWeight: '600', fontSize: 14, color: active ? '#fff' : colors.textSoft }}>{child.name}</Text>
+                </Pressable>
               )
-            }
-            return (
-              <View key={child.id} style={[styles.childRow, { borderBottomColor: colors.border }]}>
-                <View style={[styles.dot, { backgroundColor: child.color }]} />
-                <View style={s.grow}>
-                  <Text style={{ fontWeight: '700', color: colors.text }}>{child.name}</Text>
-                  <Text style={[s.muted, s.small]}>
-                    {formatAge(child.birthDate)} · {child.birthDate}
-                    {feeding ? ` · ${feeding.icon} ${feeding.short}` : ''}
-                  </Text>
-                  {aidIcons ? <Text style={[s.muted, s.small]}>{aidIcons}</Text> : null}
-                </View>
-                <Pressable onPress={() => setEditing(child.id)} style={[s.btn, s.btnSecondary, styles.smBtn]}>
-                  <Ionicons name="pencil" size={16} color={colors.text} />
-                </Pressable>
-                <Pressable onPress={() => removeChild(child)} style={[s.btn, s.btnDanger, styles.smBtn]}>
-                  <Ionicons name="trash-outline" size={16} color={colors.urgent} />
-                </Pressable>
-              </View>
-            )
-          })}
+            })}
+            <Pressable
+              onPress={() => setTab('new')}
+              style={[styles.tab, { borderColor: colors.border, backgroundColor: colors.surface2 }, showNew && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+            >
+              <Text style={{ fontWeight: '600', fontSize: 16, color: showNew ? '#fff' : colors.textSoft }}>＋</Text>
+            </Pressable>
+          </View>
 
-          {editing === 'new' ? (
-            <View style={styles.editBox}>
-              <Text style={s.h3}>Новый ребёнок</Text>
-              <ChildForm onSaved={() => setEditing(null)} />
-              <Btn title="Отмена" variant="secondary" block onPress={() => setEditing(null)} style={{ marginTop: 8 }} />
-            </View>
-          ) : (
-            <Btn title="+ Добавить ребёнка" variant="secondary" block onPress={() => setEditing('new')} style={{ marginTop: 10 }} />
-          )}
+          {/* Панель выбранного ребёнка / нового */}
+          <View style={{ paddingTop: 12 }}>
+            {showNew ? (
+              <>
+                <Text style={s.h3}>Новый ребёнок</Text>
+                <ChildForm onSaved={() => setTab(useChildrenStore.getState().activeChildId)} />
+                {children.length > 0 && (
+                  <Btn title="Отмена" variant="secondary" block onPress={() => setTab(null)} style={{ marginTop: 8 }} />
+                )}
+              </>
+            ) : selectedChild ? (
+              <>
+                <View style={styles.panelHead}>
+                  <View style={[styles.dot, { backgroundColor: selectedChild.color }]} />
+                  <Text style={{ fontWeight: '700', color: colors.text }}>Профиль: {selectedChild.name}</Text>
+                </View>
+                <ChildForm
+                  key={selectedChild.id}
+                  child={selectedChild}
+                  onSaved={() => {}}
+                  onCancel={() => setTab(selectedChild.id)}
+                  onDelete={() => removeChild(selectedChild)}
+                />
+                {/* Режим расчёта — внутри профиля ребёнка */}
+                <Text style={[s.cardTitle, { marginTop: 16 }]}>Режим расчёта</Text>
+                <Pressable
+                  onPress={toggleRegime}
+                  style={[
+                    s.btn,
+                    { minHeight: 52, width: '100%', justifyContent: 'center' },
+                    regimeMode === 'custom'
+                      ? { backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary }
+                      : { backgroundColor: colors.primary }
+                  ]}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: regimeMode === 'custom' ? colors.primary : colors.onPrimary }}>
+                    {regimeMode === 'custom' ? '🎛️ Свой режим' : '✨ Авто'}
+                  </Text>
+                </Pressable>
+                <Text style={[s.muted, s.small, { marginTop: 8 }]}>
+                  {regimeMode === 'custom'
+                    ? 'Подсказки считаются по вашим параметрам. Настроить — во вкладке «Мой режим».'
+                    : 'Подсказки считаются автоматически по возрасту. Нажмите, чтобы задать свои параметры.'}
+                </Text>
+              </>
+            ) : null}
+          </View>
         </Card>
 
         <Card>
@@ -159,8 +199,8 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  childRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1 },
-  dot: { width: 12, height: 12, borderRadius: 6 },
-  smBtn: { minHeight: 40, paddingVertical: 6, paddingHorizontal: 10 },
-  editBox: { paddingVertical: 10, borderBottomWidth: 1 }
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 8, borderBottomWidth: 1 },
+  tab: { paddingVertical: 8, paddingHorizontal: 14, minHeight: 40, borderRadius: 999, borderWidth: 1, justifyContent: 'center' },
+  panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  dot: { width: 12, height: 12, borderRadius: 6 }
 })

@@ -1,17 +1,25 @@
 import React, { useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
 import { QUICK_TOPICS } from '../data/quickTopics'
 import { Card } from './ui'
 import { useTheme } from '../theme/ThemeProvider'
 
 export default function QuickTopics() {
   const { colors } = useTheme()
+  const navigation = useNavigation<any>()
   const [openId, setOpenId] = useState<string | null>(null)
   const open = QUICK_TOPICS.find((t: any) => t.id === openId)
 
   return (
     <View style={styles.wrap}>
       <View style={styles.tags}>
+        <Pressable
+          onPress={() => navigation.navigate('advice')}
+          style={[styles.tag, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+        >
+          <Text style={[styles.tagText, { color: colors.onPrimary }]}>💡 Советы</Text>
+        </Pressable>
         {QUICK_TOPICS.map((t: any) => {
           const active = openId === t.id
           return (

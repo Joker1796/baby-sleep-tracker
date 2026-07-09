@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { uid, listChildren, putChild, deleteChild, deleteEventsForChild } from '../db'
 import { ageInMonths } from '../logic/age'
 import { seedRegimeFromNorms } from '../data/regime'
+import { DEFAULT_MAIN_BUTTONS } from '../data/eventTypes'
 import { loadString, saveString } from './persist'
 
 export const CHILD_COLORS = ['#7c6ff0', '#2f9e6e', '#d9598b', '#2492c9', '#d97706', '#8a5cd6']
@@ -17,6 +18,8 @@ interface ChildInput {
   feeding?: string
   aids?: string[]
   gender?: string | null
+  mainButtons?: { type: string; mode: string }[]
+  hideHints?: boolean
 }
 
 interface ChildrenState {
@@ -43,7 +46,7 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
     set({ children, activeChildId, loaded: true })
   },
 
-  async add({ name, birthDate, color, feeding, aids, gender }) {
+  async add({ name, birthDate, color, feeding, aids, gender, mainButtons, hideHints }) {
     const child: Child = {
       id: uid(),
       name,
@@ -52,6 +55,8 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
       feeding: feeding || 'breast',
       aids: aids || [],
       gender: gender || null,
+      mainButtons: mainButtons || DEFAULT_MAIN_BUTTONS,
+      hideHints: hideHints || false,
       regime: { mode: 'auto' }
     }
     await putChild(child)
