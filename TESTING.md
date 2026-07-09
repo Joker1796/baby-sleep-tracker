@@ -12,16 +12,26 @@
 
 ```bash
 # Типы — должно завершиться без ошибок
-npx tsc --noEmit
+npm run typecheck
 
-# Юнит-тесты бизнес-логики (60 тестов: age / advisor / sleepAnalyzer / guidance)
+# ESLint
+npm run lint
+
+# Юнит-тесты логики и сторов (vitest)
 npm test
 
 # Сборка бандла — ловит ошибки импортов/резолвинга модулей
 npx expo export --platform ios --output-dir /tmp/babyapp-export
 ```
 
-Ожидаемо: `tsc` молчит, `npm test` → `60 passed`, `expo export` → `Bundled … Exported`.
+Ожидаемо: `tsc` и ESLint молчат, `npm test` → все зелёные, `expo export` → `Bundled … Exported`.
+То же самое (кроме export) автоматически гоняет CI на каждый пуш.
+
+E2e-смоук по реальному приложению (нужен собранный на симуляторе билд и [Maestro](https://maestro.mobile.dev)):
+
+```bash
+npm run e2e   # флоу в .maestro/: онбординг, трекинг сна, вкладки, «Мой режим»
+```
 
 ---
 
@@ -30,13 +40,13 @@ npx expo export --platform ios --output-dir /tmp/babyapp-export
 Нужен Node 18+, установленные зависимости (`npm install`).
 
 ```bash
-npm start          # QR-код: открыть в Expo Go (iOS/Android)
 npm run ios        # iOS-симулятор (нужен Xcode)
 npm run android    # Android-эмулятор (нужен Android Studio/AVD)
+npm start          # только Metro, если приложение уже установлено (dev-client)
 ```
 
-- **Проще всего:** установить **Expo Go** на телефон, запустить `npm start`, отсканировать QR.
-- Первый запуск дольше — Metro собирает бандл. После — hot-reload.
+- **Expo Go не подходит** — проект на SDK 57 с нативными модулями, нужен dev-build (`expo run:*`).
+- Первый запуск дольше — сборка нативного проекта и бандла. После — hot-reload.
 - Если хочешь переустановить с нуля: `npx expo start -c` (сброс кэша).
 
 При старте видно короткий сплэш-лоадер (инициализация SQLite + AsyncStorage), затем —

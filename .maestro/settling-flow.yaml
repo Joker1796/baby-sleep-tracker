@@ -1,0 +1,31 @@
+# Сценарий укладывания: настройка своего режима → укладывание → уснул.
+appId: com.anonymous.reginaapp
+---
+- launchApp:
+    clearState: true
+
+# Онбординг
+- assertVisible: 'Режим малыша'
+- tapOn: 'Например, Миша'
+- inputText: 'Тест'
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: 'Добавить'
+    direction: DOWN
+- tapOn: 'Добавить'
+- assertVisible: 'Нет данных о сне'
+
+# Переключение режима Авто → Свой прямо с главного экрана
+- tapOn: '.*Авто.*'
+- assertVisible: '.*Свой.*'
+
+# Вкладка «Мой режим» появилась и показывает нормы
+- tapOn: '.*Мой режим.*'
+- assertVisible: 'Нормы для возраста.*'
+- assertVisible: 'Основные параметры'
+
+# Возврат режима в Авто через настройки профиля
+- tapOn: '.*Сегодня.*tab.*'
+- tapOn: '.*Свой.*'
+- assertVisible: '.*Авто.*'

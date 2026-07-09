@@ -42,7 +42,8 @@
     "test": "vitest run src",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js}\" App.tsx index.ts"
+    "format": "prettier --write \"src/**/*.{ts,tsx,js}\" App.tsx index.ts",
+    "e2e": "maestro test .maestro"
   },
   "private": true
 }
