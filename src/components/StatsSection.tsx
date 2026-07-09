@@ -6,14 +6,13 @@ import { useSorted } from '../store/events'
 import { useActiveChild } from '../store/children'
 import { useNow } from '../time/now'
 import { analyzeDay } from '../logic/sleepAnalyzer'
-import { ageInMonths, formatDurationMin, plural } from '../logic/age'
+import { ageInMonths, formatDurationMin } from '../logic/age'
 import { getNorms } from '../data/sleepNorms'
-import { EVENT_TYPES, CALENDAR_TYPE_IDS, NON_SLEEP_TYPE_LIST, typeDef } from '../data/eventTypes'
+import { EVENT_TYPES, NON_SLEEP_TYPE_LIST } from '../data/eventTypes'
 import { dayCount, dayTotalMin } from '../logic/eventStats'
-import { scheduleProfile, buildSchedule } from '../logic/schedule'
 import { animateLayout } from '../utils/animation'
 import { Card, Btn, KeyValueRow } from './ui'
-import DateTimeInput from './DateTimeInput'
+import SchedulePlanner from './SchedulePlanner'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
@@ -30,11 +29,9 @@ const chartH = H - PAD.top - PAD.bottom
 function y(hours: number) {
   return PAD.top + chartH - (Math.min(hours, MAX_H) / MAX_H) * chartH
 }
-function minutesToDate(min: number) {
-  return dayjs().startOf('day').add(min, 'minute').toDate()
-}
 
 // Статистика сна/событий и распорядок дня — раскрываемые секции внутри «Истории».
+// Период (7/14/30 дней) общий: влияет и на графики, и на усреднение распорядка.
 export default function StatsSection() {
   const { colors } = useTheme()
   const s = useCommonStyles()
@@ -45,11 +42,6 @@ export default function StatsSection() {
   const [days, setDays] = useState(7)
   const [metric, setMetric] = useState('sleep')
   const [showStats, setShowStats] = useState(false)
-  const [showSchedule, setShowSchedule] = useState(false)
-  const [wakeMin, setWakeMin] = useState<number | null>(null)
-  const [bedMin, setBedMin] = useState<number | null>(null)
-  // День, на который строим распорядок (по умолчанию — завтра)
-  const [schedDate, setSchedDate] = useState<Date>(() => dayjs(now).add(1, 'day').startOf('day').toDate())
 
   const usedEventTypes = useMemo(() => {
     const presentTypes = new Set(events.filter(e => !e.planned && e.type !== 'sleep').map(e => e.type))
@@ -126,60 +118,6 @@ export default function StatsSection() {
     else if (avg.total > max + 30) avgVerdict = 'Сна в среднем больше нормы — если малыш бодр и весел, для младенцев это обычно не проблема.'
     else avgVerdict = 'Суммарный сон в пределах возрастной нормы — отличная работа!'
   }
-
-  // Запланированные события выбранного дня → «якоря» бодрствования для расписания
-  const anchors = useMemo(() => {
-    const aStart = dayjs(schedDate).startOf('day')
-    const aEnd = aStart.add(1, 'day')
-    return events
-      .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= aStart.valueOf() && e.startedAt < aEnd.valueOf())
-      .map(e => ({ min: dayjs(e.startedAt).diff(aStart, 'minute'), label: typeDef(e.type).label, icon: typeDef(e.type).icon || '📌' }))
-  }, [events, schedDate])
-
-  // Профиль и расписание тоже считаем только в развёрнутом состоянии.
-  const profile = useMemo(
-    () => (showSchedule && child ? scheduleProfile(events, now, days, child) : null),
-    [showSchedule, child, events, now, days]
-  )
-  const schedule = useMemo(
-    () => (profile ? buildSchedule(profile, { wakeMin, bedMin, anchors }) : null),
-    [profile, wakeMin, bedMin, anchors]
-  )
-
-  const schedRows: any[] = useMemo(() => {
-    if (!schedule) return []
-    const rows: any[] = [{ kind: 'wake', hhmm: schedule.wake.hhmm }]
-    const stops = [
-      ...schedule.naps.map((n: any) => ({ at: n.startMin, kind: 'nap', nap: n })),
-      ...schedule.anchors.map((a: any) => ({ at: a.min, kind: 'event', ev: a }))
-    ].sort((x, z) => x.at - z.at)
-    let prevEnd = schedule.wake.min
-    let napIdx = 0
-    for (const st of stops) {
-      if (st.kind === 'nap') {
-        rows.push({ kind: 'gap', min: st.nap.startMin - prevEnd })
-        rows.push({ kind: 'nap', idx: ++napIdx, nap: st.nap })
-        prevEnd = st.nap.endMin
-      } else {
-        rows.push({ kind: 'event', ev: st.ev })
-      }
-    }
-    rows.push({ kind: 'gap', min: schedule.bedtime.min - prevEnd })
-    rows.push({ kind: 'bed', hhmm: schedule.bedtime.hhmm })
-    return rows
-  }, [schedule])
-
-  function openSchedule() {
-    const prof = child ? scheduleProfile(events, now, days, child) : null
-    if (prof) {
-      if (wakeMin == null) setWakeMin(prof.wakeMin)
-      if (bedMin == null) setBedMin(prof.bedMin)
-    }
-    animateLayout()
-    setShowSchedule(true)
-  }
-
-  const timeTicks = [0, 6, 12, 18, 24]
 
   return (
     <View>
@@ -293,64 +231,7 @@ export default function StatsSection() {
       )}
 
       {/* ── Распорядок дня ── */}
-      {!showSchedule ? (
-        <Btn title="🗓️ Построить распорядок дня" block onPress={openSchedule} style={{ marginBottom: 12 }} />
-      ) : (
-        schedule && (
-          <Card>
-            <Text style={s.cardTitle}>Распорядок дня</Text>
-            <Text style={[s.muted, s.small, { marginBottom: 12 }]}>
-              {schedule.source === 'history'
-                ? `На основе средних за ${schedule.daysCounted} ${plural(schedule.daysCounted, 'день', 'дня', 'дней')} с данными`
-                : 'По возрастным нормам — данных о сне пока мало'}
-            </Text>
-
-            <View style={{ marginBottom: 14 }}>
-              <Text style={s.label}>День (учитываются события из календаря на эту дату)</Text>
-              <DateTimeInput value={schedDate} mode="date" onChange={setSchedDate} />
-            </View>
-
-            <View style={styles.bounds}>
-              <View style={s.grow}>
-                <Text style={s.label}>Начало дня</Text>
-                <DateTimeInput value={minutesToDate(wakeMin ?? 0)} mode="time" onChange={d => setWakeMin(dayjs(d).hour() * 60 + dayjs(d).minute())} />
-              </View>
-              <View style={s.grow}>
-                <Text style={s.label}>Конец дня</Text>
-                <DateTimeInput value={minutesToDate(bedMin ?? 0)} mode="time" onChange={d => setBedMin(dayjs(d).hour() * 60 + dayjs(d).minute())} />
-              </View>
-            </View>
-
-            <View style={styles.tlWrap}>
-              <View style={[styles.tlBar, { backgroundColor: colors.surface2 }]}>
-                {schedule.segments.map((seg: any, i: number) => (
-                  <View key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${(seg.from / 1440) * 100}%`, width: `${((seg.to - seg.from) / 1440) * 100}%`, backgroundColor: seg.type === 'night' ? colors.nightBar : colors.dayBar }} />
-                ))}
-              </View>
-              <View style={styles.tlTicks}>
-                {timeTicks.map(t => (
-                  <Text key={t} style={[styles.tick, { color: colors.textSoft, left: `${(t / 24) * 100}%` }]}>{t}</Text>
-                ))}
-              </View>
-            </View>
-
-            <View>
-              {schedRows.map((r: any, i: number) => {
-                if (r.kind === 'wake') return <SchedRow key={i} icon="☀️" label="Подъём" time={r.hhmm} />
-                if (r.kind === 'gap') return <Text key={i} style={[s.muted, s.small, styles.gap]}>бодрствование ~{formatDurationMin(r.min)}</Text>
-                if (r.kind === 'nap') return <SchedRow key={i} icon="😴" label={`Сон ${r.idx} · ${formatDurationMin(r.nap.durMin)}`} time={`${r.nap.startHHMM}–${r.nap.endHHMM}`} />
-                if (r.kind === 'event') return <SchedRow key={i} icon={r.ev.icon} label={`${r.ev.label} · бодрствование`} time={r.ev.hhmm} event />
-                return <SchedRow key={i} icon="🌙" label="Ночной сон" time={r.hhmm} night />
-              })}
-            </View>
-
-            {schedule.adjusted && (
-              <Text style={[s.muted, s.small, { marginTop: 10 }]}>🎯 Распорядок подстроен под события из календаря — к их времени малыш бодрствует.</Text>
-            )}
-            <Text style={[s.muted, s.small, { marginTop: 10 }]}>Окна бодрствования короче с утра и длиннее к вечеру. Ориентир по средним, а не жёсткое правило.</Text>
-          </Card>
-        )
-      )}
+      <SchedulePlanner days={days} />
     </View>
   )
 }
@@ -364,30 +245,9 @@ function Legend({ color, label, textColor, dashed }: { color: string; label: str
   )
 }
 
-function SchedRow({ icon, label, time, night, event }: { icon: string; label: string; time: string; night?: boolean; event?: boolean }) {
-  const { colors } = useTheme()
-  const bg = event ? colors.warnSoft : night ? colors.primarySoft : colors.surface2
-  return (
-    <View style={[styles.schedRow, { backgroundColor: bg }, event && { borderWidth: 1, borderColor: colors.warn }]}>
-      <Text style={{ fontSize: 18 }}>{icon}</Text>
-      <Text style={[styles.schedLabel, { color: colors.text }]}>{label}</Text>
-      <Text style={[styles.schedTime, { color: colors.text }]}>{time}</Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
-  schedLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
-  schedTime: { fontSize: 14, fontWeight: '700' },
   legend: { flexDirection: 'row', gap: 16, justifyContent: 'center', marginTop: 6 },
   legItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legDot: { width: 10, height: 10, borderRadius: 3 },
-  legLine: { width: 16, borderTopWidth: 2, borderStyle: 'dashed' },
-  bounds: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  tlWrap: { marginBottom: 14 },
-  tlBar: { position: 'relative', height: 22, borderRadius: 6, overflow: 'hidden' },
-  tlTicks: { position: 'relative', height: 14, marginTop: 2 },
-  tick: { position: 'absolute', fontSize: 9, transform: [{ translateX: -4 }] },
-  schedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, marginBottom: 2 },
-  gap: { paddingVertical: 3, paddingLeft: 40 }
+  legLine: { width: 16, borderTopWidth: 2, borderStyle: 'dashed' }
 })

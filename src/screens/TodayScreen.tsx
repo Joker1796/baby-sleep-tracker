@@ -14,7 +14,7 @@ import {
   useDismissedAdvice
 } from '../store/settling'
 import { useNow } from '../time/now'
-import { buildGuidance } from '../logic/guidance'
+import { buildGuidance, Guidance } from '../logic/guidance'
 import { formatDurationMin, plural, ageInMonths } from '../logic/age'
 import { sleepVerb, wakeVerb } from '../logic/gender'
 import ChildSwitcher from '../components/ChildSwitcher'
@@ -63,14 +63,10 @@ export default function TodayScreen() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
   }, [])
 
-  const guidance = useMemo<any>(() => {
+  const guidance = useMemo<Guidance | null>(() => {
     if (!child) return null
-    // buildGuidance — JS-модуль: типы параметров выводятся из значений по умолчанию (null)
-    return buildGuidance({ child, events, now, settling: settlingSession as any, extension: napExtension as any })
+    return buildGuidance({ child, events, now, settling: settlingSession, extension: napExtension })
   }, [child, events, now, settlingSession, napExtension])
-
-  const advice = guidance?.advisor || null
-  const isNightWaking = !!guidance?.isNightWaking
 
   // Если малыш заснул — закрываем сессии укладывания и продления.
   useEffect(() => {
@@ -81,10 +77,12 @@ export default function TodayScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSleep?.id])
 
-  if (!child || !advice) {
+  if (!child || !guidance) {
     return <View style={[s.screen]} />
   }
 
+  const advice = guidance.advisor
+  const isNightWaking = guidance.isNightWaking
   const st = advice.state
   const sleptWord = sleepVerb(child?.gender).toLowerCase()
   const wokeWord = wakeVerb(child?.gender).toLowerCase()
@@ -108,20 +106,20 @@ export default function TodayScreen() {
   // «Скрывать подсказки» из профиля: приветствие, поддержка и карточки-подсказки.
   // Поздравления (milestone) и кубок дня остаются.
   const hideHints = !!child.hideHints
-  const showSleepButton = guidance && !['settling', 'nap-extension'].includes(guidance.phase)
-  const showGreeting = guidance?.greeting && !hideHints && !greetingDismissed
-  const showMilestone = guidance?.milestone && !milestoneDismissed
-  const showEncouragement = guidance?.encouragement && !hideHints && !encouragementDismissed
+  const showSleepButton = !['settling', 'nap-extension'].includes(guidance.phase)
+  const greeting = !hideHints && !greetingDismissed ? guidance.greeting : null
+  const milestone = !milestoneDismissed ? guidance.milestone : null
+  const encouragement = !hideHints && !encouragementDismissed ? guidance.encouragement : null
 
   const dismissedToday = dismissedAdvice && dismissedAdvice.date === new Date(now).toDateString() ? dismissedAdvice.ids : []
-  const secondaryAdvices = (advice.advices || []).filter((a: any) => !a.general).slice(0, 4)
+  const secondaryAdvices = advice.advices.filter(a => !a.general).slice(0, 4)
   const visibleAdvices = hideHints
     ? []
-    : secondaryAdvices.filter((a: any) => !a.profile || !dismissedToday.includes(a.id))
+    : secondaryAdvices.filter(a => !a.profile || !dismissedToday.includes(a.id))
 
   const regimeMode = child.regime?.mode || 'auto'
   function toggleRegime() {
-    if (child) useChildrenStore.getState().setRegimeMode(child.id, regimeMode === 'custom' ? 'auto' : 'custom')
+    if (child) useChildrenStore.getState().toggleRegimeMode(child.id)
   }
 
   const showWwBar = progress != null && !st.sleeping && !isNightWaking
@@ -131,18 +129,18 @@ export default function TodayScreen() {
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <ChildSwitcher />
 
-        {showMilestone && (
+        {milestone && (
           <Card style={[styles.milestone, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
             <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('milestone', child.id)}>
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
-            <Text style={{ fontSize: 30 }}>{guidance!.milestone.isYear ? '🎂' : '🎉'}</Text>
-            <Text style={[styles.milestoneText, { color: colors.text }]}>{guidance!.milestone.text}</Text>
+            <Text style={{ fontSize: 30 }}>{milestone.isYear ? '🎂' : '🎉'}</Text>
+            <Text style={[styles.milestoneText, { color: colors.text }]}>{milestone.text}</Text>
           </Card>
         )}
 
-        {showGreeting && (
-          <DayGreeting greeting={guidance!.greeting} onDismiss={() => settling().dismiss('greeting', child.id)} />
+        {greeting && (
+          <DayGreeting greeting={greeting} onDismiss={() => settling().dismiss('greeting', child.id)} />
         )}
 
         {!(child.aids && child.aids.length) && !aidsHintDismissed && (
@@ -205,42 +203,42 @@ export default function TodayScreen() {
           </View>
         </Card>
 
-        {guidance?.achievement && (
+        {guidance.achievement && (
           <Card style={[styles.trophy, { borderColor: colors.warn }]}>
             <Text style={{ fontSize: 26 }}>🏆</Text>
             <Text style={[styles.rowText, { color: colors.text }]}>{guidance.achievement.text}</Text>
           </Card>
         )}
 
-        {showEncouragement && (
+        {encouragement && (
           <Card style={[styles.support, { backgroundColor: colors.medicineSoft }]}>
             <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('encouragement', child.id)}>
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 26 }}>💛</Text>
-            <Text style={[styles.rowText, { color: colors.text, paddingRight: 24 }]}>{guidance!.encouragement.text}</Text>
+            <Text style={[styles.rowText, { color: colors.text, paddingRight: 24 }]}>{encouragement.text}</Text>
           </Card>
         )}
 
-        {guidance && guidance.phase !== 'active' && (
+        {guidance.phase !== 'active' && (
           <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />
         )}
 
-        {guidance?.showExtendNap && (
+        {guidance.showExtendNap && (
           <Btn title="🔁 Продлить сон" block onPress={() => settling().startExtension(child.id)} style={{ marginBottom: 12 }} />
         )}
 
         {showSleepButton && <SleepButton />}
         <EventButtons onLogged={showToast} onEdit={setSheetModel} />
 
-        {guidance && guidance.phase === 'active' && (
+        {guidance.phase === 'active' && (
           <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />
         )}
 
         {visibleAdvices.length > 0 && (
           <>
             <Text style={[s.cardTitle, { marginBottom: 6 }]}>Ещё подсказки</Text>
-            {visibleAdvices.map((a: any) => (
+            {visibleAdvices.map(a => (
               <AdviceCard key={a.id} advice={a} dismissible={a.profile} onDismiss={() => settling().dismissAdvice(child.id, a.id)} />
             ))}
           </>

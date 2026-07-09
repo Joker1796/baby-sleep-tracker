@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import dayjs from 'dayjs'
 import { useEventsStore, useSorted, selectOpenInterval, SleepEvent } from '../store/events'
-import { useActiveChild } from '../store/children'
+import { useActiveChild, MainButton } from '../store/children'
 import { useNow, simNow } from '../time/now'
 import { formatDurationMin, ageInMonths } from '../logic/age'
 import { poopVerb } from '../logic/gender'
@@ -16,8 +16,6 @@ import {
 import { useTheme } from '../theme/ThemeProvider'
 import { eventColors } from '../theme/eventColor'
 import { radiusSm } from '../theme/colors'
-
-type MainButton = { type: string; mode: string }
 
 export default function EventButtons({
   onLogged,

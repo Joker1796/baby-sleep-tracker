@@ -33,7 +33,7 @@ export default function SettingsScreen() {
 
   const regimeMode = selectedChild?.regime?.mode || 'auto'
   function toggleRegime() {
-    if (selectedChild) useChildrenStore.getState().setRegimeMode(selectedChild.id, regimeMode === 'custom' ? 'auto' : 'custom')
+    if (selectedChild) useChildrenStore.getState().toggleRegimeMode(selectedChild.id)
   }
 
   function removeChild(child: Child) {

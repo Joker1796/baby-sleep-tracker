@@ -1,15 +1,9 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Greeting } from '../logic/guidance'
 import { Card } from './ui'
 import { useTheme } from '../theme/ThemeProvider'
-
-export interface Greeting {
-  line: string
-  achievements: string[]
-  attention: string[]
-  progress?: string
-}
 
 function Bullets({ items, color }: { items: string[]; color: string }) {
   return (

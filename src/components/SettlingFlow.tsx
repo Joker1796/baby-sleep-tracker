@@ -6,6 +6,7 @@ import { useEventsStore, useSorted } from '../store/events'
 import { useSettlingStore } from '../store/settling'
 import { useActiveChild, useChildrenStore } from '../store/children'
 import { useNow } from '../time/now'
+import { Guidance, GuidancePhase } from '../logic/guidance'
 import { sleepVerb } from '../logic/gender'
 import { formatDurationMin } from '../logic/age'
 import { typeDef, CALENDAR_TYPE_IDS } from '../data/eventTypes'
@@ -15,7 +16,7 @@ import WakeChecklist from './WakeChecklist'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
 
-const PHASE_ICON: Record<string, string> = {
+const PHASE_ICON: Record<GuidancePhase, string> = {
   'no-data': '🍼',
   active: '🤸',
   'wind-down': '🌥️',
@@ -26,7 +27,7 @@ const PHASE_ICON: Record<string, string> = {
   sleeping: '😴'
 }
 
-export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onSlept: () => void }) {
+export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance; onSlept: () => void }) {
   const { colors } = useTheme()
   const child = useActiveChild()
   const childId = child?.id

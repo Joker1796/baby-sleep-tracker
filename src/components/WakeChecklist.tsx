@@ -5,10 +5,9 @@ import dayjs from 'dayjs'
 import { useEventsStore, useSorted } from '../store/events'
 import { useNow } from '../time/now'
 import { typeDef } from '../data/eventTypes'
+import { ChecklistItem } from '../logic/guidance'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
-
-export type ChecklistItem = { id: string; type: string; label: string; scope: string }
 
 export default function WakeChecklist({
   items,

@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Advice } from '../logic/guidance'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
 
@@ -11,7 +12,7 @@ export default function AdviceCard({
   dismissible,
   onDismiss
 }: {
-  advice: { priority: number; text: string }
+  advice: Advice
   dismissible?: boolean
   onDismiss?: () => void
 }) {

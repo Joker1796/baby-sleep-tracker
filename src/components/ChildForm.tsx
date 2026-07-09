@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native'
 import dayjs from 'dayjs'
-import { useChildrenStore, CHILD_COLORS, Child } from '../store/children'
+import { useChildrenStore, CHILD_COLORS, Child, MainButton } from '../store/children'
 import { GENDERS, FEEDING_TYPES, SLEEP_AIDS } from '../data/childOptions'
 import { EVENT_TYPES, MAIN_BUTTON_TYPE_LIST, getMainButtons, typesForAge } from '../data/eventTypes'
 import { ageInMonths } from '../logic/age'
@@ -9,8 +9,6 @@ import { Btn } from './ui'
 import DateTimeInput from './DateTimeInput'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
-
-type MainButton = { type: string; mode: string }
 // Синтетическая строка «Грудь» объединяет feedLeft+feedRight в один переключатель.
 const BREAST_ROW = { id: 'breast', icon: '🤱', btnLabel: 'Грудь', kind: 'point', canTime: true, combined: ['feedLeft', 'feedRight'] }
 
@@ -58,7 +56,7 @@ export default function ChildForm({
   )
 
   const rowIds = (row: any): string[] => row.combined || [row.id]
-  const defaultMode = (type: string) => ((EVENT_TYPES as any)[type].kind === 'interval' ? 'time' : 'count')
+  const defaultMode = (type: string): MainButton['mode'] => ((EVENT_TYPES as any)[type].kind === 'interval' ? 'time' : 'count')
   const isEnabled = (row: any) => rowIds(row).some(id => mainButtons.some(b => b.type === id))
   const modeOf = (row: any) => {
     for (const id of rowIds(row)) {
@@ -72,7 +70,7 @@ export default function ChildForm({
     if (isEnabled(row)) setMainButtons(prev => prev.filter(b => !ids.includes(b.type)))
     else setMainButtons(prev => [...prev, ...ids.map(id => ({ type: id, mode: defaultMode(id) }))])
   }
-  function setMode(row: any, mode: string) {
+  function setMode(row: any, mode: MainButton['mode']) {
     const ids = rowIds(row)
     setMainButtons(prev => prev.map(b => (ids.includes(b.type) ? { ...b, mode } : b)))
   }

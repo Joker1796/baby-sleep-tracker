@@ -9,7 +9,42 @@ export const CHILD_COLORS = ['#7c6ff0', '#2f9e6e', '#d9598b', '#2492c9', '#d9770
 
 const ACTIVE_KEY = 'activeChildId'
 
-export type Child = any
+// Кнопка на главном экране: тип события и режим кнопки
+// ('time' — засекает длительность, 'count' — считает нажатия).
+export interface MainButton {
+  type: string
+  mode: 'time' | 'count'
+}
+
+// Настраиваемый режим сна (переопределяет возрастные нормы). mode: 'auto' —
+// авторасчёт по возрасту, остальные поля игнорируются.
+export interface ChildRegime {
+  mode: 'auto' | 'custom'
+  wakeWindow?: number
+  napCount?: number
+  napDurationMin?: number
+  dayStart?: string
+  nightStart?: string
+  morningWake?: string
+  nightSleepMin?: number
+  windDownMin?: number
+  shortNapReduce?: boolean
+}
+
+// Профиль ребёнка. Записи из старых версий/бэкапов могут не иметь части
+// полей — всё, кроме идентичности, опционально.
+export interface Child {
+  id: string
+  name: string
+  birthDate: string // 'YYYY-MM-DD'
+  color: string
+  feeding?: string
+  aids?: string[]
+  gender?: string | null
+  mainButtons?: MainButton[]
+  hideHints?: boolean
+  regime?: ChildRegime
+}
 
 interface ChildInput {
   name: string
@@ -18,7 +53,7 @@ interface ChildInput {
   feeding?: string
   aids?: string[]
   gender?: string | null
-  mainButtons?: { type: string; mode: string }[]
+  mainButtons?: MainButton[]
   hideHints?: boolean
 }
 
@@ -29,8 +64,9 @@ interface ChildrenState {
   load: () => Promise<void>
   add: (input: ChildInput) => Promise<Child>
   update: (child: Child) => Promise<void>
-  setRegimeMode: (id: string, mode: string) => Promise<void>
-  updateRegime: (id: string, patch: any) => Promise<void>
+  setRegimeMode: (id: string, mode: ChildRegime['mode']) => Promise<void>
+  toggleRegimeMode: (id: string) => Promise<void>
+  updateRegime: (id: string, patch: Partial<ChildRegime>) => Promise<void>
   remove: (id: string) => Promise<void>
   setActive: (id: string | null) => void
 }
@@ -55,7 +91,7 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
       feeding: feeding || 'breast',
       aids: aids || [],
       gender: gender || null,
-      mainButtons: mainButtons || DEFAULT_MAIN_BUTTONS,
+      mainButtons: mainButtons || (DEFAULT_MAIN_BUTTONS as MainButton[]),
       hideHints: hideHints || false,
       regime: { mode: 'auto' }
     }
@@ -67,7 +103,7 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
 
   async update(child) {
     // Гарантируем «чистый» объект (без прокси/ссылок) перед записью.
-    const plain = JSON.parse(JSON.stringify(child))
+    const plain: Child = JSON.parse(JSON.stringify(child))
     await putChild(plain)
     set({ children: get().children.map(c => (c.id === plain.id ? plain : c)) })
   },
@@ -77,16 +113,22 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
   async setRegimeMode(id, mode) {
     const child = get().children.find(c => c.id === id)
     if (!child) return
-    let regime
+    let regime: ChildRegime
     if (mode === 'custom') {
       regime =
         child.regime && child.regime.wakeWindow != null
           ? { ...child.regime, mode: 'custom' }
-          : seedRegimeFromNorms(ageInMonths(child.birthDate))
+          : (seedRegimeFromNorms(ageInMonths(child.birthDate)) as ChildRegime)
     } else {
       regime = { ...(child.regime || {}), mode: 'auto' }
     }
     await get().update({ ...child, regime })
+  },
+
+  async toggleRegimeMode(id) {
+    const child = get().children.find(c => c.id === id)
+    if (!child) return
+    await get().setRegimeMode(id, child.regime?.mode === 'custom' ? 'auto' : 'custom')
   },
 
   async updateRegime(id, patch) {
