@@ -4,9 +4,9 @@ import { initDb } from './db'
 import { loadTimeOffset } from './time/now'
 import { useSettingsStore } from './store/settings'
 import { useSettlingStore } from './store/settling'
-import { useChildrenStore } from './store/children'
+import { useChildrenStore, selectActiveChild } from './store/children'
 import { useEventsStore } from './store/events'
-import { selectActiveChild } from './store/children'
+import { initNapReminders } from './notifications/napReminder'
 
 // Инициализация приложения при старте. В web всё грузилось синхронно из
 // localStorage; здесь SQLite и AsyncStorage асинхронны, поэтому bootstrap
@@ -21,4 +21,7 @@ export async function bootstrap(): Promise<void> {
   await useChildrenStore.getState().load()
   const active = selectActiveChild(useChildrenStore.getState())
   if (active) await useEventsStore.getState().load(active.id)
+
+  // После загрузки сторов: подписки на изменения + первичное планирование.
+  initNapReminders()
 }

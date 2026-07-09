@@ -77,11 +77,11 @@ export default function CalendarScreen() {
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.nav}>
-          <Pressable onPress={() => { setMonth(month.subtract(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]}>
+          <Pressable onPress={() => { setMonth(month.subtract(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Предыдущий месяц">
             <Ionicons name="chevron-back" size={22} color={colors.primary} />
           </Pressable>
           <Text style={[styles.title, { color: colors.text }]}>{month.format('MMMM YYYY')}</Text>
-          <Pressable onPress={() => { setMonth(month.add(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]}>
+          <Pressable onPress={() => { setMonth(month.add(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Следующий месяц">
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />
           </Pressable>
         </View>

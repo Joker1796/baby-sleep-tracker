@@ -68,7 +68,7 @@ export default function HistoryScreen() {
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.dayNav}>
-          <Pressable onPress={() => setDayOffset(d => d - 1)} style={[styles.arrow, { backgroundColor: colors.surface }]}>
+          <Pressable onPress={() => setDayOffset(d => d - 1)} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Предыдущий день">
             <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </Pressable>
           <View style={styles.dayLabel}>
@@ -79,6 +79,8 @@ export default function HistoryScreen() {
             disabled={dayOffset >= 0}
             onPress={() => setDayOffset(d => d + 1)}
             style={[styles.arrow, { backgroundColor: colors.surface }, dayOffset >= 0 && { opacity: 0.35 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Следующий день"
           >
             <Ionicons name="chevron-forward" size={24} color={colors.primary} />
           </Pressable>

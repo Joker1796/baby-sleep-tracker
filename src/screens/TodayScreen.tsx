@@ -131,7 +131,7 @@ export default function TodayScreen() {
 
         {milestone && (
           <Card style={[styles.milestone, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('milestone', child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('milestone', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть поздравление">
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 30 }}>{milestone.isYear ? '🎂' : '🎉'}</Text>
@@ -145,7 +145,7 @@ export default function TodayScreen() {
 
         {!(child.aids && child.aids.length) && !aidsHintDismissed && (
           <Card style={[styles.aidsHint, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('aidsHint', child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('aidsHint', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть подсказку о настройках">
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 24 }}>⚙️</Text>
@@ -212,7 +212,7 @@ export default function TodayScreen() {
 
         {encouragement && (
           <Card style={[styles.support, { backgroundColor: colors.medicineSoft }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('encouragement', child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('encouragement', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть поддержку">
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 26 }}>💛</Text>

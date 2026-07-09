@@ -11,6 +11,7 @@ import { sleepVerb } from '../logic/gender'
 import { formatDurationMin } from '../logic/age'
 import { typeDef, CALENDAR_TYPE_IDS } from '../data/eventTypes'
 import { animateLayout } from '../utils/animation'
+import { hapticSuccess } from '../utils/haptics'
 import { Card, Btn } from './ui'
 import WakeChecklist from './WakeChecklist'
 import { useTheme } from '../theme/ThemeProvider'
@@ -83,6 +84,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
   }
   async function fellAsleep() {
     if (!childId) return
+    hapticSuccess()
     await useEventsStore.getState().startInterval('sleep')
     settling.getState().clear(childId)
     settling.getState().clearExtension(childId)
@@ -220,6 +222,8 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
             <Pressable
               onPress={changeLocation}
               style={[styles.backBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Выбрать другое место укладывания"
             >
               <Ionicons name="arrow-back" size={20} color={colors.textSoft} />
             </Pressable>

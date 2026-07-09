@@ -23,7 +23,7 @@ export default function AdviceCard({
   return (
     <View style={[styles.advice, { backgroundColor: bg }, dismissible && { paddingRight: 34 }]}>
       {dismissible && (
-        <Pressable style={styles.close} onPress={onDismiss} hitSlop={8}>
+        <Pressable style={styles.close} onPress={onDismiss} hitSlop={8} accessibilityRole="button" accessibilityLabel="Скрыть подсказку">
           <Ionicons name="close" size={20} color={colors.textSoft} />
         </Pressable>
       )}

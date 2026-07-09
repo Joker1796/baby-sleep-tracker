@@ -22,7 +22,7 @@ export default function DayGreeting({ greeting, onDismiss }: { greeting: Greetin
   const { colors } = useTheme()
   return (
     <Card style={{ backgroundColor: colors.primarySoft }}>
-      <Pressable style={styles.close} onPress={onDismiss} hitSlop={8}>
+      <Pressable style={styles.close} onPress={onDismiss} hitSlop={8} accessibilityRole="button" accessibilityLabel="Скрыть приветствие">
         <Ionicons name="close" size={22} color={colors.textSoft} />
       </Pressable>
       <View style={styles.head}>

@@ -13,6 +13,7 @@ import {
   FEEDING_TYPE_IDS,
   getMainButtons
 } from '../data/eventTypes'
+import { hapticTap } from '../utils/haptics'
 import { useTheme } from '../theme/ThemeProvider'
 import { eventColors } from '../theme/eventColor'
 import { radiusSm } from '../theme/colors'
@@ -65,6 +66,7 @@ export default function EventButtons({
       onEdit({ isNew: true, type: b.type, startedAt: simNow() })
       return
     }
+    hapticTap()
     const store = useEventsStore.getState()
     if (b.mode === 'time') {
       const open = selectOpenInterval(events, b.type)

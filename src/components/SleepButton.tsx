@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useEventsStore, useCurrentSleep } from '../store/events'
 import { useActiveChild } from '../store/children'
 import { sleepVerb, wakeVerb } from '../logic/gender'
+import { hapticSuccess } from '../utils/haptics'
 import { useTheme } from '../theme/ThemeProvider'
 import { radius } from '../theme/colors'
 
@@ -20,6 +21,7 @@ export default function SleepButton() {
     if (busy) return
     setBusy(true)
     try {
+      hapticSuccess()
       const store = useEventsStore.getState()
       if (sleeping) await store.endInterval(sleeping)
       else await store.startInterval('sleep')

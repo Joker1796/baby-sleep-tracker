@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useChildrenStore, useActiveChild, Child } from '../store/children'
 import { useSettingsStore, ThemePref } from '../store/settings'
+import { ensureNotificationPermission } from '../notifications/napReminder'
 import { exportBackup, importBackup, reloadStores } from '../utils/backup'
 import ChildForm from '../components/ChildForm'
 import { Card, Btn } from '../components/ui'
@@ -23,6 +24,24 @@ export default function SettingsScreen() {
   const activeChild = useActiveChild()
   const theme = useSettingsStore(st => st.theme)
   const setTheme = useSettingsStore(st => st.setTheme)
+  const napReminder = useSettingsStore(st => st.napReminder)
+  const setNapReminder = useSettingsStore(st => st.setNapReminder)
+  const [reminderNote, setReminderNote] = useState('')
+
+  async function toggleNapReminder() {
+    if (napReminder) {
+      setNapReminder(false)
+      setReminderNote('')
+      return
+    }
+    const granted = await ensureNotificationPermission()
+    if (!granted) {
+      setReminderNote('Нет разрешения на уведомления — включите его в настройках системы.')
+      return
+    }
+    setNapReminder(true)
+    setReminderNote('')
+  }
 
   // Вкладка: child.id | 'new' | null (авто → активный ребёнок)
   const [tab, setTab] = useState<string | null>(() => useChildrenStore.getState().activeChildId)
@@ -148,6 +167,25 @@ export default function SettingsScreen() {
               </>
             ) : null}
           </View>
+        </Card>
+
+        <Card>
+          <Text style={s.cardTitle}>Напоминания</Text>
+          <View style={s.row}>
+            <Text style={[s.muted, s.small, s.grow]}>
+              Уведомление, когда окно бодрствования подходит к концу и пора укладывать.
+            </Text>
+            <Pressable
+              onPress={toggleNapReminder}
+              style={[s.chip, napReminder && s.chipActive]}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: napReminder }}
+              accessibilityLabel="Напоминать об укладывании"
+            >
+              <Text style={[s.chipText, napReminder && s.chipActiveText]}>{napReminder ? 'Вкл' : 'Выкл'}</Text>
+            </Pressable>
+          </View>
+          {reminderNote ? <Text style={[s.small, { color: colors.urgent, marginTop: 8 }]}>{reminderNote}</Text> : null}
         </Card>
 
         <Card>

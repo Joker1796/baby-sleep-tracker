@@ -6,6 +6,7 @@ import { useEventsStore, useSorted } from '../store/events'
 import { useNow } from '../time/now'
 import { typeDef } from '../data/eventTypes'
 import { ChecklistItem } from '../logic/guidance'
+import { hapticTap } from '../utils/haptics'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
 
@@ -39,6 +40,7 @@ export default function WakeChecklist({
   })
 
   async function toggle(row: (typeof rows)[number]) {
+    hapticTap()
     const store = useEventsStore.getState()
     if (row.done && row.lastId) await store.remove(row.lastId)
     else await store.addPoint(row.type)
