@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,11 +10,12 @@ import { analyzeDay } from '../logic/sleepAnalyzer'
 import { formatDurationMin, plural } from '../logic/age'
 import { dayCount, dayTotalMin } from '../logic/eventStats'
 import { poopVerb } from '../logic/gender'
-import { EVENT_TYPES, NON_SLEEP_TYPE_LIST, eventKind } from '../data/eventTypes'
+import { NON_SLEEP_TYPE_LIST, typeDef, eventKind } from '../data/eventTypes'
+import { animateLayout } from '../utils/animation'
 import TimelineDay from '../components/TimelineDay'
 import EventEditSheet, { EventModel } from '../components/EventEditSheet'
 import StatsSection from '../components/StatsSection'
-import { Card, Btn } from '../components/ui'
+import { Card, Btn, KeyValueRow } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
@@ -33,28 +34,30 @@ export default function HistoryScreen() {
   const dayTs = dayjs(now).startOf('day').add(dayOffset, 'day').valueOf()
   const dayLabel = dayOffset === 0 ? 'Сегодня' : dayOffset === -1 ? 'Вчера' : dayjs(dayTs).format('D MMMM, dd')
 
-  const summary = analyzeDay(events, dayTs, now)
+  const summary = useMemo(() => analyzeDay(events, dayTs, now), [events, dayTs, now])
   const poopWord = poopVerb(child?.gender)
 
   // Строки по типам событий, реально отмеченным в этот день (кроме сна).
-  const otherStats = NON_SLEEP_TYPE_LIST.map((t: any) => {
-    const evs = events.filter(e => e.type === t.id && !e.planned && dayjs(e.startedAt).isSame(dayjs(dayTs), 'day'))
-    if (!evs.length) return null
-    const label = t.id === 'poop' ? poopWord : t.btnLabel || t.label
-    let value: string
-    if (t.amountUnit && t.amountAgg === 'sum') {
-      value = `${evs.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} ${t.amountUnit}`
-    } else if (t.amountUnit && t.amountAgg === 'last') {
-      const withAmt = evs.filter(e => e.amount != null)
-      value = withAmt.length ? `${withAmt[withAmt.length - 1].amount} ${t.amountUnit}` : `${evs.length} ${plural(evs.length, 'раз', 'раза', 'раз')}`
-    } else if (evs.some(e => eventKind(e) === 'interval')) {
-      value = formatDurationMin(dayTotalMin(events, t.id, dayTs, now))
-    } else {
-      const n = dayCount(events, t.id, dayTs)
-      value = `${n} ${plural(n, 'раз', 'раза', 'раз')}`
-    }
-    return { id: t.id, label: `${(EVENT_TYPES as any)[t.id].icon} ${label}`, value }
-  }).filter(Boolean) as { id: string; label: string; value: string }[]
+  const otherStats = useMemo(() => {
+    return NON_SLEEP_TYPE_LIST.map((t: any) => {
+      const evs = events.filter(e => e.type === t.id && !e.planned && dayjs(e.startedAt).isSame(dayjs(dayTs), 'day'))
+      if (!evs.length) return null
+      const label = t.id === 'poop' ? poopWord : t.btnLabel || t.label
+      let value: string
+      if (t.amountUnit && t.amountAgg === 'sum') {
+        value = `${evs.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} ${t.amountUnit}`
+      } else if (t.amountUnit && t.amountAgg === 'last') {
+        const withAmt = evs.filter(e => e.amount != null)
+        value = withAmt.length ? `${withAmt[withAmt.length - 1].amount} ${t.amountUnit}` : `${evs.length} ${plural(evs.length, 'раз', 'раза', 'раз')}`
+      } else if (evs.some(e => eventKind(e) === 'interval')) {
+        value = formatDurationMin(dayTotalMin(events, t.id, dayTs, now))
+      } else {
+        const n = dayCount(events, t.id, dayTs)
+        value = `${n} ${plural(n, 'раз', 'раза', 'раз')}`
+      }
+      return { id: t.id, label: `${typeDef(t.id).icon} ${label}`, value }
+    }).filter(Boolean) as { id: string; label: string; value: string }[]
+  }, [events, dayTs, now, poopWord])
 
   function addEvent() {
     const base = dayOffset === 0 ? simNow() : dayjs(dayTs).add(12, 'hour').valueOf()
@@ -83,21 +86,25 @@ export default function HistoryScreen() {
 
         <Card>
           <Text style={[s.cardTitle, { marginBottom: 8 }]}>Сводка за день</Text>
-          <Report
+          <KeyValueRow
             label="Среднее бодрствование"
             value={summary.wakeWindowMin > 0 ? formatDurationMin(summary.wakeWindowMin) : '—'}
-            colors={colors}
           />
-          <Report
+          <KeyValueRow
             label="Дневной сон"
             value={`${formatDurationMin(summary.daySleepMin)} · ${summary.napCount} ${plural(summary.napCount, 'сон', 'сна', 'снов')}`}
-            colors={colors}
           />
-          <Report label="Ночной сон" value={formatDurationMin(summary.nightSleepMin)} colors={colors} />
-          <Report label="Всего сна" value={formatDurationMin(summary.totalSleepMin)} colors={colors} />
-          {showMore && otherStats.map(r => <Report key={r.id} label={r.label} value={r.value} colors={colors} />)}
+          <KeyValueRow label="Ночной сон" value={formatDurationMin(summary.nightSleepMin)} />
+          <KeyValueRow label="Всего сна" value={formatDurationMin(summary.totalSleepMin)} />
+          {showMore && otherStats.map(r => <KeyValueRow key={r.id} label={r.label} value={r.value} />)}
           {otherStats.length > 0 && (
-            <Pressable onPress={() => setShowMore(v => !v)} style={[styles.moreBtn, { borderTopColor: colors.border }]}>
+            <Pressable
+              onPress={() => {
+                animateLayout()
+                setShowMore(v => !v)
+              }}
+              style={[styles.moreBtn, { borderTopColor: colors.border }]}
+            >
               <Ionicons name={showMore ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.textSoft} />
               <Text style={{ color: colors.textSoft, fontSize: 13, fontWeight: '600' }}>
                 {showMore ? 'Свернуть' : `Ещё ${otherStats.length} ${plural(otherStats.length, 'событие', 'события', 'событий')}`}
@@ -120,15 +127,6 @@ export default function HistoryScreen() {
   )
 }
 
-function Report({ label, value, colors }: { label: string; value: string; colors: any }) {
-  return (
-    <View style={styles.repRow}>
-      <Text style={{ color: colors.textSoft, fontSize: 14 }}>{label}</Text>
-      <Text style={{ fontWeight: '700', color: colors.text, fontSize: 14 }}>{value}</Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
   dayNav: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingBottom: 12 },
   dayLabel: { flex: 1, alignItems: 'center' },
@@ -145,6 +143,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1
   },
-  repRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 3.5 },
   moreBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1 }
 })

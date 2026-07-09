@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useEventsStore, useSorted } from '../store/events'
 import { useNow } from '../time/now'
-import { EVENT_TYPES } from '../data/eventTypes'
+import { typeDef } from '../data/eventTypes'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
 
@@ -33,7 +33,7 @@ export default function WakeChecklist({
     const matched = eventsFor(item)
     return {
       ...item,
-      icon: (EVENT_TYPES as any)[item.type]?.icon || '•',
+      icon: typeDef(item.type).icon || '•',
       done: matched.length > 0,
       lastId: matched.length ? matched[matched.length - 1].id : null
     }

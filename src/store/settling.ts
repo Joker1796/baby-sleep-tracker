@@ -2,67 +2,66 @@ import { create } from 'zustand'
 import { touchNow, simNow } from '../time/now'
 import { loadJSON, saveJSON } from './persist'
 
-const KEY = 'settlingSessions'
+const SESSIONS_KEY = 'settlingSessions'
 const EXT_KEY = 'napExtensions'
-const DISMISS_KEY = 'greetingDismissed'
-const MILESTONE_KEY = 'milestoneDismissed'
 const ADVICE_KEY = 'adviceDismissed'
-const ENCOURAGE_KEY = 'encouragementDismissed'
-const AIDS_KEY = 'aidsHintDismissed'
+
+// Карточки, скрываемые крестиком до конца дня. Ключи хранения — как в старых
+// версиях, чтобы не терять состояние после обновления приложения.
+export type DismissKind = 'greeting' | 'milestone' | 'encouragement' | 'aidsHint'
+const DISMISS_KEYS: Record<DismissKind, string> = {
+  greeting: 'greetingDismissed',
+  milestone: 'milestoneDismissed',
+  encouragement: 'encouragementDismissed',
+  aidsHint: 'aidsHintDismissed'
+}
+const DISMISS_KINDS = Object.keys(DISMISS_KEYS) as DismissKind[]
 
 type Dict = Record<string, any>
 
+export type SettlingSession = { startedAt: number; location: string | null }
+export type NapExtension = { startedAt: number }
+
 interface SettlingState {
-  sessions: Dict
-  extensions: Dict
-  greetingDismissed: Dict
-  milestoneDismissed: Dict
+  sessions: Record<string, SettlingSession>
+  extensions: Record<string, NapExtension>
+  dismissed: Record<DismissKind, Dict>
   adviceDismissed: Dict
-  encouragementDismissed: Dict
-  aidsHintDismissed: Dict
   load: () => Promise<void>
-  get: (childId: string) => any
-  getExtension: (childId: string) => any
+  get: (childId: string) => SettlingSession | null
+  getExtension: (childId: string) => NapExtension | null
   startExtension: (childId: string) => void
   clearExtension: (childId: string) => void
   start: (childId: string) => void
-  setLocation: (childId: string, location: string) => void
+  setLocation: (childId: string, location: string | null) => void
   clear: (childId: string) => void
-  dismissGreeting: (childId: string) => void
-  isGreetingDismissed: (childId: string) => boolean
-  dismissMilestone: (childId: string) => void
-  isMilestoneDismissed: (childId: string) => boolean
-  dismissEncouragement: (childId: string) => void
-  isEncouragementDismissed: (childId: string) => boolean
+  dismiss: (kind: DismissKind, childId: string) => void
+  isDismissed: (kind: DismissKind, childId: string) => boolean
   dismissAdvice: (childId: string, adviceId: string) => void
   isAdviceDismissed: (childId: string, adviceId: string) => boolean
-  dismissAidsHint: (childId: string) => void
-  isAidsHintDismissed: (childId: string) => boolean
 }
+
+const today = () => new Date(simNow()).toDateString()
 
 // Эфемерная сессия «укладывания» на ребёнка: когда начата и где укладывают.
 // Живёт до момента «Уснул» или отмены. Персист в AsyncStorage.
 export const useSettlingStore = create<SettlingState>((set, get) => ({
   sessions: {},
   extensions: {},
-  greetingDismissed: {},
-  milestoneDismissed: {},
+  dismissed: { greeting: {}, milestone: {}, encouragement: {}, aidsHint: {} },
   adviceDismissed: {},
-  encouragementDismissed: {},
-  aidsHintDismissed: {},
 
   async load() {
-    const [sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed, aidsHintDismissed] =
-      await Promise.all([
-        loadJSON<Dict>(KEY, {}),
-        loadJSON<Dict>(EXT_KEY, {}),
-        loadJSON<Dict>(DISMISS_KEY, {}),
-        loadJSON<Dict>(MILESTONE_KEY, {}),
-        loadJSON<Dict>(ADVICE_KEY, {}),
-        loadJSON<Dict>(ENCOURAGE_KEY, {}),
-        loadJSON<Dict>(AIDS_KEY, {})
-      ])
-    set({ sessions, extensions, greetingDismissed, milestoneDismissed, adviceDismissed, encouragementDismissed, aidsHintDismissed })
+    const [sessions, extensions, adviceDismissed, ...dismissedByKind] = await Promise.all([
+      loadJSON<Dict>(SESSIONS_KEY, {}),
+      loadJSON<Dict>(EXT_KEY, {}),
+      loadJSON<Dict>(ADVICE_KEY, {}),
+      ...DISMISS_KINDS.map(kind => loadJSON<Dict>(DISMISS_KEYS[kind], {}))
+    ])
+    const dismissed = Object.fromEntries(
+      DISMISS_KINDS.map((kind, i) => [kind, dismissedByKind[i]])
+    ) as Record<DismissKind, Dict>
+    set({ sessions, extensions, adviceDismissed, dismissed })
   },
 
   get(childId) {
@@ -88,71 +87,67 @@ export const useSettlingStore = create<SettlingState>((set, get) => ({
   start(childId) {
     const sessions = { ...get().sessions, [childId]: { startedAt: simNow(), location: null } }
     set({ sessions })
-    saveJSON(KEY, sessions)
+    saveJSON(SESSIONS_KEY, sessions)
   },
   setLocation(childId, location) {
     const current = get().sessions[childId]
     if (!current) return
     const sessions = { ...get().sessions, [childId]: { ...current, location } }
     set({ sessions })
-    saveJSON(KEY, sessions)
+    saveJSON(SESSIONS_KEY, sessions)
   },
   clear(childId) {
     if (!get().sessions[childId]) return
     const sessions = { ...get().sessions }
     delete sessions[childId]
     set({ sessions })
-    saveJSON(KEY, sessions)
+    saveJSON(SESSIONS_KEY, sessions)
     touchNow()
   },
 
-  dismissGreeting(childId) {
-    const greetingDismissed = { ...get().greetingDismissed, [childId]: new Date(simNow()).toDateString() }
-    set({ greetingDismissed })
-    saveJSON(DISMISS_KEY, greetingDismissed)
+  // Крестик скрывает карточку данного вида до конца дня.
+  dismiss(kind, childId) {
+    const forKind = { ...get().dismissed[kind], [childId]: today() }
+    set({ dismissed: { ...get().dismissed, [kind]: forKind } })
+    saveJSON(DISMISS_KEYS[kind], forKind)
   },
-  isGreetingDismissed(childId) {
-    return get().greetingDismissed[childId] === new Date(simNow()).toDateString()
-  },
-  dismissMilestone(childId) {
-    const milestoneDismissed = { ...get().milestoneDismissed, [childId]: new Date(simNow()).toDateString() }
-    set({ milestoneDismissed })
-    saveJSON(MILESTONE_KEY, milestoneDismissed)
-  },
-  isMilestoneDismissed(childId) {
-    return get().milestoneDismissed[childId] === new Date(simNow()).toDateString()
-  },
-  dismissEncouragement(childId) {
-    const encouragementDismissed = { ...get().encouragementDismissed, [childId]: new Date(simNow()).toDateString() }
-    set({ encouragementDismissed })
-    saveJSON(ENCOURAGE_KEY, encouragementDismissed)
-  },
-  isEncouragementDismissed(childId) {
-    return get().encouragementDismissed[childId] === new Date(simNow()).toDateString()
+  isDismissed(kind, childId) {
+    return get().dismissed[kind][childId] === today()
   },
 
   // Крестик скрывает конкретную профильную подсказку до конца дня.
   // Модель: childId → { date, ids: [adviceId] }.
   dismissAdvice(childId, adviceId) {
-    const today = new Date(simNow()).toDateString()
+    const date = today()
     const entry = get().adviceDismissed[childId]
-    const ids = entry && typeof entry === 'object' && entry.date === today ? [...entry.ids] : []
+    const ids = entry && typeof entry === 'object' && entry.date === date ? [...entry.ids] : []
     if (!ids.includes(adviceId)) ids.push(adviceId)
-    const adviceDismissed = { ...get().adviceDismissed, [childId]: { date: today, ids } }
+    const adviceDismissed = { ...get().adviceDismissed, [childId]: { date, ids } }
     set({ adviceDismissed })
     saveJSON(ADVICE_KEY, adviceDismissed)
   },
   isAdviceDismissed(childId, adviceId) {
     const entry = get().adviceDismissed[childId]
     if (!entry || typeof entry !== 'object') return false
-    return entry.date === new Date(simNow()).toDateString() && entry.ids.includes(adviceId)
-  },
-  dismissAidsHint(childId) {
-    const aidsHintDismissed = { ...get().aidsHintDismissed, [childId]: new Date(simNow()).toDateString() }
-    set({ aidsHintDismissed })
-    saveJSON(AIDS_KEY, aidsHintDismissed)
-  },
-  isAidsHintDismissed(childId) {
-    return get().aidsHintDismissed[childId] === new Date(simNow()).toDateString()
+    return entry.date === today() && entry.ids.includes(adviceId)
   }
 }))
+
+// --- реактивные хуки для компонентов (точечные подписки вместо всего стора) ---
+
+export function useSettlingSession(childId: string | undefined): SettlingSession | null {
+  return useSettlingStore(s => (childId ? s.sessions[childId] : null) || null)
+}
+
+export function useNapExtension(childId: string | undefined): NapExtension | null {
+  return useSettlingStore(s => (childId ? s.extensions[childId] : null) || null)
+}
+
+export function useDismissedToday(kind: DismissKind, childId: string | undefined): boolean {
+  return useSettlingStore(s => (childId ? s.dismissed[kind][childId] === today() : false))
+}
+
+// Запись о скрытых подсказках ребёнка ({ date, ids }) — стабильная ссылка до изменения.
+export function useDismissedAdvice(childId: string | undefined): { date: string; ids: string[] } | null {
+  return useSettlingStore(s => (childId ? s.adviceDismissed[childId] : null) || null)
+}

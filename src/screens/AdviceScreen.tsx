@@ -6,6 +6,7 @@ import { useActiveChild } from '../store/children'
 import { useNow } from '../time/now'
 import { ageInMonths } from '../logic/age'
 import { TIPS, TIP_CATEGORIES, tipsForAge } from '../data/tips'
+import { animateLayout } from '../utils/animation'
 import { Card } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -58,7 +59,13 @@ export default function AdviceScreen() {
               const expanded = expandedId === tip.id
               return (
                 <Card key={tip.id} style={styles.tipCard}>
-                  <Pressable style={styles.tipHead} onPress={() => setExpandedId(expanded ? null : tip.id)}>
+                  <Pressable
+                    style={styles.tipHead}
+                    onPress={() => {
+                      animateLayout()
+                      setExpandedId(expanded ? null : tip.id)
+                    }}
+                  >
                     <Text style={[styles.tipTitle, s.grow, { color: colors.text }]}>{tip.title}</Text>
                     <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSoft} />
                   </Pressable>

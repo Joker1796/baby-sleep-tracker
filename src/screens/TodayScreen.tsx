@@ -6,7 +6,13 @@ import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useActiveChild, useChildrenStore } from '../store/children'
 import { useSorted, useCurrentSleep } from '../store/events'
-import { useSettlingStore } from '../store/settling'
+import {
+  useSettlingStore,
+  useSettlingSession,
+  useNapExtension,
+  useDismissedToday,
+  useDismissedAdvice
+} from '../store/settling'
 import { useNow } from '../time/now'
 import { buildGuidance } from '../logic/guidance'
 import { formatDurationMin, plural, ageInMonths } from '../logic/age'
@@ -19,7 +25,7 @@ import EventButtons from '../components/EventButtons'
 import EventEditSheet, { EventModel } from '../components/EventEditSheet'
 import AdviceCard from '../components/AdviceCard'
 import QuickTopics from '../components/QuickTopics'
-import { Card, Btn } from '../components/ui'
+import { Card, Btn, Toast } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
@@ -29,12 +35,20 @@ export default function TodayScreen() {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<any>()
   const child = useActiveChild()
+  const childId = child?.id
   const events = useSorted()
   const currentSleep = useCurrentSleep()
   const now = useNow()
 
-  // Подписываемся на весь стор укладывания, чтобы пересчитывать guidance при его изменениях.
-  const settlingState = useSettlingStore()
+  // Точечные подписки: guidance пересчитывается только от своих входов,
+  // а не от любого изменения стора укладывания.
+  const settlingSession = useSettlingSession(childId)
+  const napExtension = useNapExtension(childId)
+  const greetingDismissed = useDismissedToday('greeting', childId)
+  const milestoneDismissed = useDismissedToday('milestone', childId)
+  const encouragementDismissed = useDismissedToday('encouragement', childId)
+  const aidsHintDismissed = useDismissedToday('aidsHint', childId)
+  const dismissedAdvice = useDismissedAdvice(childId)
   const settling = useSettlingStore.getState
 
   const [toast, setToast] = useState('')
@@ -45,28 +59,24 @@ export default function TodayScreen() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(''), 2200)
   }
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+  }, [])
 
   const guidance = useMemo<any>(() => {
     if (!child) return null
-    return buildGuidance({
-      child,
-      events,
-      now,
-      settling: settlingState.sessions[child.id] || null,
-      extension: settlingState.extensions[child.id] || null
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [child, events, now, settlingState])
+    // buildGuidance — JS-модуль: типы параметров выводятся из значений по умолчанию (null)
+    return buildGuidance({ child, events, now, settling: settlingSession as any, extension: napExtension as any })
+  }, [child, events, now, settlingSession, napExtension])
 
   const advice = guidance?.advisor || null
   const isNightWaking = !!guidance?.isNightWaking
 
   // Если малыш заснул — закрываем сессии укладывания и продления.
   useEffect(() => {
-    const id = child?.id
-    if (currentSleep && id) {
-      if (settling().sessions[id]) settling().clear(id)
-      if (settling().extensions[id]) settling().clearExtension(id)
+    if (currentSleep && childId) {
+      if (settling().sessions[childId]) settling().clear(childId)
+      if (settling().extensions[childId]) settling().clearExtension(childId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSleep?.id])
@@ -95,13 +105,19 @@ export default function TodayScreen() {
   const left = advice.wakeWindowLeft
   const timeToSleepLabel = left == null ? '' : left > 0 ? `время до сна ~${formatDurationMin(left)}` : 'пора укладывать'
 
+  // «Скрывать подсказки» из профиля: приветствие, поддержка и карточки-подсказки.
+  // Поздравления (milestone) и кубок дня остаются.
+  const hideHints = !!child.hideHints
   const showSleepButton = guidance && !['settling', 'nap-extension'].includes(guidance.phase)
-  const showGreeting = guidance?.greeting && !settling().isGreetingDismissed(child.id)
-  const showMilestone = guidance?.milestone && !settling().isMilestoneDismissed(child.id)
-  const showEncouragement = guidance?.encouragement && !settling().isEncouragementDismissed(child.id)
+  const showGreeting = guidance?.greeting && !hideHints && !greetingDismissed
+  const showMilestone = guidance?.milestone && !milestoneDismissed
+  const showEncouragement = guidance?.encouragement && !hideHints && !encouragementDismissed
 
+  const dismissedToday = dismissedAdvice && dismissedAdvice.date === new Date(now).toDateString() ? dismissedAdvice.ids : []
   const secondaryAdvices = (advice.advices || []).filter((a: any) => !a.general).slice(0, 4)
-  const visibleAdvices = secondaryAdvices.filter((a: any) => !a.profile || !settling().isAdviceDismissed(child.id, a.id))
+  const visibleAdvices = hideHints
+    ? []
+    : secondaryAdvices.filter((a: any) => !a.profile || !dismissedToday.includes(a.id))
 
   const regimeMode = child.regime?.mode || 'auto'
   function toggleRegime() {
@@ -117,7 +133,7 @@ export default function TodayScreen() {
 
         {showMilestone && (
           <Card style={[styles.milestone, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismissMilestone(child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('milestone', child.id)}>
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 30 }}>{guidance!.milestone.isYear ? '🎂' : '🎉'}</Text>
@@ -126,12 +142,12 @@ export default function TodayScreen() {
         )}
 
         {showGreeting && (
-          <DayGreeting greeting={guidance!.greeting} onDismiss={() => settling().dismissGreeting(child.id)} />
+          <DayGreeting greeting={guidance!.greeting} onDismiss={() => settling().dismiss('greeting', child.id)} />
         )}
 
-        {!(child.aids && child.aids.length) && !settling().isAidsHintDismissed(child.id) && (
+        {!(child.aids && child.aids.length) && !aidsHintDismissed && (
           <Card style={[styles.aidsHint, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismissAidsHint(child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('aidsHint', child.id)}>
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 24 }}>⚙️</Text>
@@ -198,7 +214,7 @@ export default function TodayScreen() {
 
         {showEncouragement && (
           <Card style={[styles.support, { backgroundColor: colors.medicineSoft }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismissEncouragement(child.id)}>
+            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('encouragement', child.id)}>
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 26 }}>💛</Text>
@@ -238,11 +254,7 @@ export default function TodayScreen() {
         )}
       </ScrollView>
 
-      {toast ? (
-        <View style={[styles.toast, { backgroundColor: colors.text, bottom: insets.bottom + 12 }]}>
-          <Text style={{ color: colors.bg, fontWeight: '600', fontSize: 14 }}>{toast}</Text>
-        </View>
-      ) : null}
+      <Toast message={toast} bottom={insets.bottom + 12} />
 
       <EventEditSheet model={sheetModel} onClose={() => setSheetModel(null)} />
     </View>
@@ -264,6 +276,5 @@ const styles = StyleSheet.create({
   forecastItem: { flexDirection: 'row', justifyContent: 'space-between' },
   trophy: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: 1 },
   support: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', position: 'relative' },
-  rowText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  toast: { position: 'absolute', alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 999 }
+  rowText: { flex: 1, fontSize: 14, lineHeight: 20 }
 })

@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useSorted, SleepEvent } from '../store/events'
 import { useActiveChild } from '../store/children'
 import { useNow } from '../time/now'
-import { EVENT_TYPES } from '../data/eventTypes'
+import { typeDef } from '../data/eventTypes'
 import { formatDurationMin, plural } from '../logic/age'
 import { poopVerb } from '../logic/gender'
 import { analyzeDay } from '../logic/sleepAnalyzer'
@@ -24,24 +24,28 @@ export default function TimelineDay({
   const now = useNow()
   const events = useSorted()
 
-  const typeOf = (e: SleepEvent) =>
-    (EVENT_TYPES as any)[e.type] || { label: e.type, icon: '❓', kind: 'point' }
+  const typeOf = (e: SleepEvent) => typeDef(e.type)
 
   const softColor = (e: SleepEvent) => eventColors(colors, e.type).soft
 
-  const from = dayjs(dayTs).startOf('day').valueOf()
-  const to = dayjs(dayTs).endOf('day').valueOf()
   // Хронологический порядок: раннее сверху, позднее снизу
-  const dayEvents = events.filter(e => {
-    const end = e.endedAt ?? ((EVENT_TYPES as any)[e.type]?.kind === 'interval' ? now : e.startedAt)
-    return e.startedAt <= to && end >= from
-  })
+  const dayEvents = useMemo(() => {
+    const from = dayjs(dayTs).startOf('day').valueOf()
+    const to = dayjs(dayTs).endOf('day').valueOf()
+    return events.filter(e => {
+      const end = e.endedAt ?? (typeDef(e.type).kind === 'interval' ? now : e.startedAt)
+      return e.startedAt <= to && end >= from
+    })
+  }, [events, dayTs, now])
 
   // Порядковые номера ТОЛЬКО дневных снов (nap) — для подписи «Сон N».
-  const napNo: Record<string, number> = {}
-  analyzeDay(events, dayTs, now).naps.forEach((s: SleepEvent, i: number) => {
-    napNo[s.id] = i + 1
-  })
+  const napNo: Record<string, number> = useMemo(() => {
+    const map: Record<string, number> = {}
+    analyzeDay(events, dayTs, now).naps.forEach((s: SleepEvent, i: number) => {
+      map[s.id] = i + 1
+    })
+    return map
+  }, [events, dayTs, now])
 
   function labelOf(e: SleepEvent) {
     if (e.type === 'poop') return poopVerb(child?.gender)
@@ -50,7 +54,7 @@ export default function TimelineDay({
   }
 
   function amountLabel(e: SleepEvent) {
-    const unit = (EVENT_TYPES as any)[e.type]?.amountUnit
+    const unit = typeOf(e).amountUnit
     return unit != null && e.amount != null ? `${e.amount} ${unit}` : ''
   }
 

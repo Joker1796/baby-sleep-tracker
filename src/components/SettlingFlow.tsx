@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
@@ -8,7 +8,8 @@ import { useActiveChild, useChildrenStore } from '../store/children'
 import { useNow } from '../time/now'
 import { sleepVerb } from '../logic/gender'
 import { formatDurationMin } from '../logic/age'
-import { EVENT_TYPES, CALENDAR_TYPE_IDS } from '../data/eventTypes'
+import { typeDef, CALENDAR_TYPE_IDS } from '../data/eventTypes'
+import { animateLayout } from '../utils/animation'
 import { Card, Btn } from './ui'
 import WakeChecklist from './WakeChecklist'
 import { useTheme } from '../theme/ThemeProvider'
@@ -39,14 +40,14 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
   const childCount = useChildrenStore(st => st.children.length)
 
   // Запланированные события календаря активного ребёнка ТОЛЬКО за сегодня.
-  const dayStart = dayjs(now).startOf('day').valueOf()
-  const dayEnd = dayjs(now).endOf('day').valueOf()
-  const plannedEvents =
-    phase === 'active'
-      ? events
-          .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= dayStart && e.startedAt <= dayEnd)
-          .sort((a, b) => a.startedAt - b.startedAt)
-      : []
+  const plannedEvents = useMemo(() => {
+    if (phase !== 'active') return []
+    const dayStart = dayjs(now).startOf('day').valueOf()
+    const dayEnd = dayjs(now).endOf('day').valueOf()
+    return events
+      .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= dayStart && e.startedAt <= dayEnd)
+      .sort((a, b) => a.startedAt - b.startedAt)
+  }, [phase, events, now])
   const visiblePlanned = plansExpanded ? plannedEvents : plannedEvents.slice(0, 3)
 
   // Напоминание за 2 часа (только при нескольких детях)
@@ -56,8 +57,8 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
       : null
   const soonInfo = soon
     ? {
-        icon: (EVENT_TYPES as any)[soon.type]?.icon || '📌',
-        label: (EVENT_TYPES as any)[soon.type]?.label || soon.type,
+        icon: typeDef(soon.type).icon || '📌',
+        label: typeDef(soon.type).label,
         hhmm: dayjs(soon.startedAt).format('HH:mm'),
         inMin: Math.round((soon.startedAt - now) / 60000)
       }
@@ -112,7 +113,10 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
               return (
                 <Pressable
                   key={i}
-                  onPress={() => setOpenActivity(active ? null : i)}
+                  onPress={() => {
+                    animateLayout()
+                    setOpenActivity(active ? null : i)
+                  }}
                   style={[
                     styles.ideaTag,
                     { backgroundColor: active ? colors.primarySoft : colors.surface2, borderColor: active ? colors.primary : colors.border }
@@ -148,9 +152,9 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
           <Text style={[styles.planCap, { color: colors.textSoft }]}>🗓️ Из календаря на сегодня</Text>
           {visiblePlanned.map(e => (
             <View key={e.id} style={[styles.planLine, { borderBottomColor: colors.border }]}>
-              <Text style={{ fontSize: 18 }}>{(EVENT_TYPES as any)[e.type]?.icon}</Text>
+              <Text style={{ fontSize: 18 }}>{typeDef(e.type).icon}</Text>
               <Text style={{ flex: 1, fontSize: 14, color: colors.text }}>
-                {(EVENT_TYPES as any)[e.type]?.label || e.type}
+                {typeDef(e.type).label}
                 {e.note ? ` · ${e.note}` : ''}
               </Text>
               <Text style={{ fontSize: 13, color: e.startedAt < now ? colors.urgent : colors.textSoft }}>
@@ -159,7 +163,13 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: any; onS
             </View>
           ))}
           {plannedEvents.length > 3 && (
-            <Pressable onPress={() => setPlansExpanded(v => !v)} style={{ marginTop: 6 }}>
+            <Pressable
+              onPress={() => {
+                animateLayout()
+                setPlansExpanded(v => !v)
+              }}
+              style={{ marginTop: 6 }}
+            >
               <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
                 {plansExpanded ? 'Свернуть' : `Ещё ${plannedEvents.length - 3}`}
               </Text>

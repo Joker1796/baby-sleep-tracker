@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons'
 import dayjs, { Dayjs } from 'dayjs'
 import { useSorted, SleepEvent } from '../store/events'
 import { useNow, simNow } from '../time/now'
-import { EVENT_TYPES, CALENDAR_TYPE_IDS, CALENDAR_TYPE_LIST } from '../data/eventTypes'
+import { typeDef, CALENDAR_TYPE_IDS, CALENDAR_TYPE_LIST } from '../data/eventTypes'
+import { animateLayout } from '../utils/animation'
 import EventEditSheet, { EventModel } from '../components/EventEditSheet'
 import { Card } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
@@ -67,7 +68,7 @@ export default function CalendarScreen() {
     setShowPalette(false)
   }
   function detailOf(e: SleepEvent) {
-    const unit = (EVENT_TYPES as any)[e.type]?.amountUnit
+    const unit = typeDef(e.type).amountUnit
     const amt = unit && e.amount != null ? `${e.amount} ${unit}` : ''
     return [amt, e.note].filter(Boolean).join(' · ')
   }
@@ -123,7 +124,10 @@ export default function CalendarScreen() {
               {selectedDay ? selectedDay.format('D MMMM') : 'Сегодня'}
             </Text>
             <Pressable
-              onPress={() => setShowPalette(v => !v)}
+              onPress={() => {
+                animateLayout()
+                setShowPalette(v => !v)
+              }}
               style={[s.chip, showPalette && s.chipActive]}
             >
               <Text style={[s.chipText, showPalette && s.chipActiveText]}>{showPalette ? '✕' : '＋ Добавить'}</Text>
@@ -147,10 +151,10 @@ export default function CalendarScreen() {
 
           {selectedEvents.map(e => (
             <Pressable key={e.id} onPress={() => setSheetModel(e)} style={[styles.evRow, { borderBottomColor: colors.border }]}>
-              <Text style={{ fontSize: 20 }}>{(EVENT_TYPES as any)[e.type]?.icon}</Text>
+              <Text style={{ fontSize: 20 }}>{typeDef(e.type).icon}</Text>
               <View style={s.grow}>
                 <Text style={{ fontWeight: '600', fontSize: 14, color: colors.text }}>
-                  {(EVENT_TYPES as any)[e.type]?.label || e.type}
+                  {typeDef(e.type).label}
                   {e.planned ? <Text style={[s.muted, s.small]}>  · план</Text> : null}
                 </Text>
                 {detailOf(e) ? <Text style={[s.muted, s.small]}>{detailOf(e)}</Text> : null}

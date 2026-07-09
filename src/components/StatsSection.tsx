@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg'
 import dayjs from 'dayjs'
@@ -8,10 +8,11 @@ import { useNow } from '../time/now'
 import { analyzeDay } from '../logic/sleepAnalyzer'
 import { ageInMonths, formatDurationMin, plural } from '../logic/age'
 import { getNorms } from '../data/sleepNorms'
-import { EVENT_TYPES, CALENDAR_TYPE_IDS, NON_SLEEP_TYPE_LIST } from '../data/eventTypes'
+import { EVENT_TYPES, CALENDAR_TYPE_IDS, NON_SLEEP_TYPE_LIST, typeDef } from '../data/eventTypes'
 import { dayCount, dayTotalMin } from '../logic/eventStats'
 import { scheduleProfile, buildSchedule } from '../logic/schedule'
-import { Card, Btn } from './ui'
+import { animateLayout } from '../utils/animation'
+import { Card, Btn, KeyValueRow } from './ui'
 import DateTimeInput from './DateTimeInput'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -50,57 +51,73 @@ export default function StatsSection() {
   // День, на который строим распорядок (по умолчанию — завтра)
   const [schedDate, setSchedDate] = useState<Date>(() => dayjs(now).add(1, 'day').startOf('day').toDate())
 
-  const presentTypes = new Set(events.filter(e => !e.planned && e.type !== 'sleep').map(e => e.type))
-  const usedEventTypes = NON_SLEEP_TYPE_LIST.filter((t: any) => presentTypes.has(t.id) && !STATS_EXCLUDE.has(t.id))
+  const usedEventTypes = useMemo(() => {
+    const presentTypes = new Set(events.filter(e => !e.planned && e.type !== 'sleep').map(e => e.type))
+    return NON_SLEEP_TYPE_LIST.filter((t: any) => presentTypes.has(t.id) && !STATS_EXCLUDE.has(t.id))
+  }, [events])
   const metricDef: any = metric === 'sleep' ? null : (EVENT_TYPES as any)[metric]
 
   // Текущий день не включаем — статистика по завершённым дням (вчера и назад).
-  const stats: any[] = []
-  for (let i = days; i >= 1; i--) {
-    const dayTs = dayjs(now).startOf('day').subtract(i, 'day').valueOf()
-    stats.push({ dayTs, ...analyzeDay(events, dayTs, now) })
-  }
+  // Считаем только когда секция развёрнута: analyzeDay × 30 дней — дорогая операция.
+  const stats: any[] = useMemo(() => {
+    if (!showStats) return []
+    const result = []
+    for (let i = days; i >= 1; i--) {
+      const dayTs = dayjs(now).startOf('day').subtract(i, 'day').valueOf()
+      result.push({ dayTs, ...analyzeDay(events, dayTs, now) })
+    }
+    return result
+  }, [showStats, events, days, now])
 
   const norms = child ? getNorms(ageInMonths(child.birthDate, now)) : null
 
-  const slot = chartW / stats.length
+  const slot = chartW / Math.max(1, stats.length)
   const barW = Math.min(slot * 0.62, 30)
-  const bars = stats.map((d, i) => {
-    const x = PAD.left + slot * i + (slot - barW) / 2
-    const nightH = d.nightSleepMin / 60
-    const dayH = d.daySleepMin / 60
-    return { x, nightY: y(nightH), nightHpx: y(0) - y(nightH), dayY: y(nightH + dayH), dayHpx: y(nightH) - y(nightH + dayH), label: dayjs(d.dayTs).format('D.MM') }
-  })
+  const bars = useMemo(
+    () =>
+      stats.map((d, i) => {
+        const x = PAD.left + slot * i + (slot - barW) / 2
+        const nightH = d.nightSleepMin / 60
+        const dayH = d.daySleepMin / 60
+        return { x, nightY: y(nightH), nightHpx: y(0) - y(nightH), dayY: y(nightH + dayH), dayHpx: y(nightH) - y(nightH + dayH), label: dayjs(d.dayTs).format('D.MM') }
+      }),
+    [stats, slot, barW]
+  )
   const gridLines = [4, 8, 12, 16, 20].map(h => ({ h, y: y(h) }))
 
-  function eventValueForDay(type: string, ts: number) {
-    const def: any = (EVENT_TYPES as any)[type]
-    if (def?.amountUnit && def.amountAgg === 'sum') {
-      return events.filter(e => e.type === type && !e.planned && dayjs(e.startedAt).isSame(dayjs(ts), 'day')).reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
-    }
-    if (def?.kind === 'interval') return dayTotalMin(events, type, ts, now)
-    return dayCount(events, type, ts)
-  }
-  const eventUnit = metricDef ? (metricDef.amountUnit && metricDef.amountAgg === 'sum' ? metricDef.amountUnit : metricDef.kind === 'interval' ? 'мин' : 'раз') : ''
-  const eventSeries = metric === 'sleep' ? [] : stats.map(d => ({ dayTs: d.dayTs, value: eventValueForDay(metric, d.dayTs) }))
-  const eventMax = Math.max(1, ...eventSeries.map(e => e.value))
-  const eventBars = eventSeries.map((e, i) => {
-    const x = PAD.left + slot * i + (slot - barW) / 2
-    const hpx = (e.value / eventMax) * chartH
-    return { x, y: PAD.top + chartH - hpx, hpx, value: e.value, label: dayjs(e.dayTs).format('D.MM') }
-  })
-  const eventWith = eventSeries.filter(e => e.value > 0)
-  const eventAvg = eventWith.length ? Math.round((eventWith.reduce((a, e) => a + e.value, 0) / eventWith.length) * 10) / 10 : null
-
-  const withData = stats.filter(d => d.totalSleepMin > 0)
-  const avg = withData.length
-    ? {
-        total: withData.reduce((a, d) => a + d.totalSleepMin, 0) / withData.length,
-        day: withData.reduce((a, d) => a + d.daySleepMin, 0) / withData.length,
-        naps: Math.round((withData.reduce((a, d) => a + d.napCount, 0) / withData.length) * 10) / 10,
-        daysCounted: withData.length
+  const { eventBars, eventAvg } = useMemo(() => {
+    if (metric === 'sleep' || !stats.length) return { eventBars: [] as any[], eventAvg: null as number | null }
+    const def: any = (EVENT_TYPES as any)[metric]
+    const valueForDay = (ts: number) => {
+      if (def?.amountUnit && def.amountAgg === 'sum') {
+        return events.filter(e => e.type === metric && !e.planned && dayjs(e.startedAt).isSame(dayjs(ts), 'day')).reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
       }
-    : null
+      if (def?.kind === 'interval') return dayTotalMin(events, metric, ts, now)
+      return dayCount(events, metric, ts)
+    }
+    const series = stats.map(d => ({ dayTs: d.dayTs, value: valueForDay(d.dayTs) }))
+    const max = Math.max(1, ...series.map(e => e.value))
+    const eventBars = series.map((e, i) => {
+      const x = PAD.left + slot * i + (slot - barW) / 2
+      const hpx = (e.value / max) * chartH
+      return { x, y: PAD.top + chartH - hpx, hpx, value: e.value, label: dayjs(e.dayTs).format('D.MM') }
+    })
+    const withValue = series.filter(e => e.value > 0)
+    const eventAvg = withValue.length ? Math.round((withValue.reduce((a, e) => a + e.value, 0) / withValue.length) * 10) / 10 : null
+    return { eventBars, eventAvg }
+  }, [metric, stats, events, now, slot, barW])
+  const eventUnit = metricDef ? (metricDef.amountUnit && metricDef.amountAgg === 'sum' ? metricDef.amountUnit : metricDef.kind === 'interval' ? 'мин' : 'раз') : ''
+
+  const avg = useMemo(() => {
+    const withData = stats.filter(d => d.totalSleepMin > 0)
+    if (!withData.length) return null
+    return {
+      total: withData.reduce((a, d) => a + d.totalSleepMin, 0) / withData.length,
+      day: withData.reduce((a, d) => a + d.daySleepMin, 0) / withData.length,
+      naps: Math.round((withData.reduce((a, d) => a + d.napCount, 0) / withData.length) * 10) / 10,
+      daysCounted: withData.length
+    }
+  }, [stats])
 
   let avgVerdict = ''
   if (avg && norms) {
@@ -111,18 +128,27 @@ export default function StatsSection() {
   }
 
   // Запланированные события выбранного дня → «якоря» бодрствования для расписания
-  const aStart = dayjs(schedDate).startOf('day')
-  const aEnd = aStart.add(1, 'day')
-  const anchors = events
-    .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= aStart.valueOf() && e.startedAt < aEnd.valueOf())
-    .map(e => ({ min: dayjs(e.startedAt).diff(aStart, 'minute'), label: (EVENT_TYPES as any)[e.type]?.label || e.type, icon: (EVENT_TYPES as any)[e.type]?.icon || '📌' }))
+  const anchors = useMemo(() => {
+    const aStart = dayjs(schedDate).startOf('day')
+    const aEnd = aStart.add(1, 'day')
+    return events
+      .filter(e => e.planned && CALENDAR_TYPE_IDS.includes(e.type) && e.startedAt >= aStart.valueOf() && e.startedAt < aEnd.valueOf())
+      .map(e => ({ min: dayjs(e.startedAt).diff(aStart, 'minute'), label: typeDef(e.type).label, icon: typeDef(e.type).icon || '📌' }))
+  }, [events, schedDate])
 
-  const profile = child ? scheduleProfile(events, now, days, child) : null
-  const schedule = profile ? buildSchedule(profile, { wakeMin, bedMin, anchors }) : null
+  // Профиль и расписание тоже считаем только в развёрнутом состоянии.
+  const profile = useMemo(
+    () => (showSchedule && child ? scheduleProfile(events, now, days, child) : null),
+    [showSchedule, child, events, now, days]
+  )
+  const schedule = useMemo(
+    () => (profile ? buildSchedule(profile, { wakeMin, bedMin, anchors }) : null),
+    [profile, wakeMin, bedMin, anchors]
+  )
 
-  const schedRows: any[] = []
-  if (schedule) {
-    schedRows.push({ kind: 'wake', hhmm: schedule.wake.hhmm })
+  const schedRows: any[] = useMemo(() => {
+    if (!schedule) return []
+    const rows: any[] = [{ kind: 'wake', hhmm: schedule.wake.hhmm }]
     const stops = [
       ...schedule.naps.map((n: any) => ({ at: n.startMin, kind: 'nap', nap: n })),
       ...schedule.anchors.map((a: any) => ({ at: a.min, kind: 'event', ev: a }))
@@ -131,22 +157,25 @@ export default function StatsSection() {
     let napIdx = 0
     for (const st of stops) {
       if (st.kind === 'nap') {
-        schedRows.push({ kind: 'gap', min: st.nap.startMin - prevEnd })
-        schedRows.push({ kind: 'nap', idx: ++napIdx, nap: st.nap })
+        rows.push({ kind: 'gap', min: st.nap.startMin - prevEnd })
+        rows.push({ kind: 'nap', idx: ++napIdx, nap: st.nap })
         prevEnd = st.nap.endMin
       } else {
-        schedRows.push({ kind: 'event', ev: st.ev })
+        rows.push({ kind: 'event', ev: st.ev })
       }
     }
-    schedRows.push({ kind: 'gap', min: schedule.bedtime.min - prevEnd })
-    schedRows.push({ kind: 'bed', hhmm: schedule.bedtime.hhmm })
-  }
+    rows.push({ kind: 'gap', min: schedule.bedtime.min - prevEnd })
+    rows.push({ kind: 'bed', hhmm: schedule.bedtime.hhmm })
+    return rows
+  }, [schedule])
 
   function openSchedule() {
-    if (profile) {
-      if (wakeMin == null) setWakeMin(profile.wakeMin)
-      if (bedMin == null) setBedMin(profile.bedMin)
+    const prof = child ? scheduleProfile(events, now, days, child) : null
+    if (prof) {
+      if (wakeMin == null) setWakeMin(prof.wakeMin)
+      if (bedMin == null) setBedMin(prof.bedMin)
     }
+    animateLayout()
     setShowSchedule(true)
   }
 
@@ -156,7 +185,15 @@ export default function StatsSection() {
     <View>
       {/* ── Статистика ── */}
       {!showStats ? (
-        <Btn title="📊 Статистика" block onPress={() => setShowStats(true)} style={{ marginBottom: 12 }} />
+        <Btn
+          title="📊 Статистика"
+          block
+          onPress={() => {
+            animateLayout()
+            setShowStats(true)
+          }}
+          style={{ marginBottom: 12 }}
+        />
       ) : (
         <>
           <Text style={[s.cardTitle, { marginBottom: 2 }]}>Статистика</Text>
@@ -243,10 +280,10 @@ export default function StatsSection() {
             (avg ? (
               <Card>
                 <Text style={s.cardTitle}>В среднем за {avg.daysCounted} дн. с данными</Text>
-                <AvgRow label="Всего сна в сутки" value={formatDurationMin(avg.total)} colors={colors} />
-                <AvgRow label="Дневной сон" value={formatDurationMin(avg.day)} colors={colors} />
-                <AvgRow label="Дневных снов" value={String(avg.naps)} colors={colors} />
-                {norms && <AvgRow label="Норма всего" value={`${formatDurationMin(norms.totalSleep[0])} – ${formatDurationMin(norms.totalSleep[1])}`} colors={colors} />}
+                <KeyValueRow label="Всего сна в сутки" value={formatDurationMin(avg.total)} mutedLabel={false} />
+                <KeyValueRow label="Дневной сон" value={formatDurationMin(avg.day)} mutedLabel={false} />
+                <KeyValueRow label="Дневных снов" value={String(avg.naps)} mutedLabel={false} />
+                {norms && <KeyValueRow label="Норма всего" value={`${formatDurationMin(norms.totalSleep[0])} – ${formatDurationMin(norms.totalSleep[1])}`} mutedLabel={false} />}
                 <Text style={[s.muted, s.small, { marginTop: 8 }]}>{avgVerdict}</Text>
               </Card>
             ) : (
@@ -299,11 +336,11 @@ export default function StatsSection() {
 
             <View>
               {schedRows.map((r: any, i: number) => {
-                if (r.kind === 'wake') return <SchedRow key={i} icon="☀️" label="Подъём" time={r.hhmm} colors={colors} />
+                if (r.kind === 'wake') return <SchedRow key={i} icon="☀️" label="Подъём" time={r.hhmm} />
                 if (r.kind === 'gap') return <Text key={i} style={[s.muted, s.small, styles.gap]}>бодрствование ~{formatDurationMin(r.min)}</Text>
-                if (r.kind === 'nap') return <SchedRow key={i} icon="😴" label={`Сон ${r.idx} · ${formatDurationMin(r.nap.durMin)}`} time={`${r.nap.startHHMM}–${r.nap.endHHMM}`} colors={colors} />
-                if (r.kind === 'event') return <SchedRow key={i} icon={r.ev.icon} label={`${r.ev.label} · бодрствование`} time={r.ev.hhmm} colors={colors} event />
-                return <SchedRow key={i} icon="🌙" label="Ночной сон" time={r.hhmm} colors={colors} night />
+                if (r.kind === 'nap') return <SchedRow key={i} icon="😴" label={`Сон ${r.idx} · ${formatDurationMin(r.nap.durMin)}`} time={`${r.nap.startHHMM}–${r.nap.endHHMM}`} />
+                if (r.kind === 'event') return <SchedRow key={i} icon={r.ev.icon} label={`${r.ev.label} · бодрствование`} time={r.ev.hhmm} event />
+                return <SchedRow key={i} icon="🌙" label="Ночной сон" time={r.hhmm} night />
               })}
             </View>
 
@@ -327,37 +364,25 @@ function Legend({ color, label, textColor, dashed }: { color: string; label: str
   )
 }
 
-function AvgRow({ label, value, colors }: { label: string; value: string; colors: any }) {
-  return (
-    <View style={styles.avgRow}>
-      <Text style={{ color: colors.text, fontSize: 14 }}>{label}</Text>
-      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{value}</Text>
-    </View>
-  )
-}
-
-function SchedRow({ icon, label, time, colors, night, event }: { icon: string; label: string; time: string; colors: any; night?: boolean; event?: boolean }) {
+function SchedRow({ icon, label, time, night, event }: { icon: string; label: string; time: string; night?: boolean; event?: boolean }) {
+  const { colors } = useTheme()
   const bg = event ? colors.warnSoft : night ? colors.primarySoft : colors.surface2
   return (
     <View style={[styles.schedRow, { backgroundColor: bg }, event && { borderWidth: 1, borderColor: colors.warn }]}>
       <Text style={{ fontSize: 18 }}>{icon}</Text>
-      <Text style={[s2.schedLabel, { color: colors.text }]}>{label}</Text>
-      <Text style={[s2.schedTime, { color: colors.text }]}>{time}</Text>
+      <Text style={[styles.schedLabel, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.schedTime, { color: colors.text }]}>{time}</Text>
     </View>
   )
 }
 
-const s2 = StyleSheet.create({
-  schedLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
-  schedTime: { fontSize: 14, fontWeight: '700' }
-})
-
 const styles = StyleSheet.create({
+  schedLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
+  schedTime: { fontSize: 14, fontWeight: '700' },
   legend: { flexDirection: 'row', gap: 16, justifyContent: 'center', marginTop: 6 },
   legItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legDot: { width: 10, height: 10, borderRadius: 3 },
   legLine: { width: 16, borderTopWidth: 2, borderStyle: 'dashed' },
-  avgRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   bounds: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   tlWrap: { marginBottom: 14 },
   tlBar: { position: 'relative', height: 22, borderRadius: 6, overflow: 'hidden' },

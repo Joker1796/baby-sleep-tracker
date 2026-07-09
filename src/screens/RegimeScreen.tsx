@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -7,7 +7,7 @@ import { useActiveChild, useChildrenStore } from '../store/children'
 import { useNow } from '../time/now'
 import { formatDurationMin, ageInMonths } from '../logic/age'
 import { getNorms } from '../data/sleepNorms'
-import { Card, Btn } from '../components/ui'
+import { Card, Btn, KeyValueRow } from '../components/ui'
 import DateTimeInput from '../components/DateTimeInput'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -35,16 +35,16 @@ export default function RegimeScreen() {
 
   return (
     <View style={s.screen}>
-      <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
         {norms && (
           <Card style={{ borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySoft }}>
             <Text style={s.cardTitle}>Нормы для возраста {norms.label}</Text>
-            <SumRow label="Окно бодрствования" value={`${norms.wakeWindow[0]}–${norms.wakeWindow[1]} мин`} colors={colors} />
-            <SumRow label="Дневных снов" value={norms.naps[0] === norms.naps[1] ? String(norms.naps[0]) : `${norms.naps[0]}–${norms.naps[1]}`} colors={colors} />
-            <SumRow label="Дневной сон" value={`${formatDurationMin(norms.daySleep[0])} – ${formatDurationMin(norms.daySleep[1])}`} colors={colors} />
-            <SumRow label="Ночной сон" value={`${formatDurationMin(norms.nightSleep[0])} – ${formatDurationMin(norms.nightSleep[1])}`} colors={colors} />
-            <SumRow label="Всего за сутки" value={`${formatDurationMin(norms.totalSleep[0])} – ${formatDurationMin(norms.totalSleep[1])}`} colors={colors} />
-            <SumRow label="Отбой" value={`${norms.bedtime[0]}–${norms.bedtime[1]}`} colors={colors} />
+            <KeyValueRow label="Окно бодрствования" value={`${norms.wakeWindow[0]}–${norms.wakeWindow[1]} мин`} />
+            <KeyValueRow label="Дневных снов" value={norms.naps[0] === norms.naps[1] ? String(norms.naps[0]) : `${norms.naps[0]}–${norms.naps[1]}`} />
+            <KeyValueRow label="Дневной сон" value={`${formatDurationMin(norms.daySleep[0])} – ${formatDurationMin(norms.daySleep[1])}`} />
+            <KeyValueRow label="Ночной сон" value={`${formatDurationMin(norms.nightSleep[0])} – ${formatDurationMin(norms.nightSleep[1])}`} />
+            <KeyValueRow label="Всего за сутки" value={`${formatDurationMin(norms.totalSleep[0])} – ${formatDurationMin(norms.totalSleep[1])}`} />
+            <KeyValueRow label="Отбой" value={`${norms.bedtime[0]}–${norms.bedtime[1]}`} />
             <Text style={[s.muted, s.small, { marginTop: 10 }]}>{norms.note}</Text>
           </Card>
         )}
@@ -61,12 +61,13 @@ export default function RegimeScreen() {
             <Btn title="Включить настраиваемый режим" block onPress={enableCustom} />
           </Card>
         ) : (
-          <>
+          // key: при смене активного ребёнка поля ввода пересоздаются с его значениями
+          <React.Fragment key={child.id}>
             <Card>
               <Text style={s.cardTitle}>Целевые ориентиры</Text>
-              <SumRow label="Дневной сон" value={formatDurationMin(daySleepMin)} colors={colors} />
-              <SumRow label="Ночной сон" value={formatDurationMin(Number(regime?.nightSleepMin) || 0)} colors={colors} />
-              <SumRow label="Всего за сутки" value={formatDurationMin(totalSleepMin)} colors={colors} />
+              <KeyValueRow label="Дневной сон" value={formatDurationMin(daySleepMin)} />
+              <KeyValueRow label="Ночной сон" value={formatDurationMin(Number(regime?.nightSleepMin) || 0)} />
+              <KeyValueRow label="Всего за сутки" value={formatDurationMin(totalSleepMin)} />
             </Card>
 
             <Card>
@@ -95,32 +96,27 @@ export default function RegimeScreen() {
               Значения переопределяют возрастные нормы. Чтобы вернуться к авторасчёту, переключите режим на «✨ Авто» на
               экране «Сегодня».
             </Text>
-          </>
+          </React.Fragment>
         )}
       </ScrollView>
     </View>
   )
 }
 
-function SumRow({ label, value, colors }: { label: string; value: string; colors: any }) {
-  return (
-    <View style={styles.sumItem}>
-      <Text style={{ color: colors.textSoft, fontSize: 14 }}>{label}</Text>
-      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{value}</Text>
-    </View>
-  )
-}
-
+// Значение фиксируем по окончании ввода (onEndEditing), а не на каждый символ:
+// иначе каждое нажатие клавиши записывало бы профиль ребёнка в SQLite.
 function NumField({ label, value, onChange, s, colors }: { label: string; value: any; onChange: (v: number) => void; s: any; colors: any }) {
+  const [text, setText] = useState(value != null ? String(value) : '')
   return (
     <View style={styles.field}>
       <Text style={s.label}>{label}</Text>
       <TextInput
         style={s.input}
         keyboardType="number-pad"
-        defaultValue={value != null ? String(value) : ''}
+        value={text}
         placeholderTextColor={colors.textSoft}
-        onChangeText={t => onChange(Number(t) || 0)}
+        onChangeText={setText}
+        onEndEditing={() => onChange(Number(text) || 0)}
       />
     </View>
   )
@@ -137,7 +133,6 @@ function TimeField({ label, value, onChange, s }: { label: string; value: any; o
 }
 
 const styles = StyleSheet.create({
-  sumItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   field: { marginBottom: 12 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' }

@@ -2,9 +2,8 @@ import React, { useState } from 'react'
 import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useChildrenStore, useActiveChild, Child } from '../store/children'
-import { useEventsStore } from '../store/events'
 import { useSettingsStore, ThemePref } from '../store/settings'
-import { exportBackup, importBackup } from '../utils/backup'
+import { exportBackup, importBackup, reloadStores } from '../utils/backup'
 import ChildForm from '../components/ChildForm'
 import { Card, Btn } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
@@ -37,12 +36,6 @@ export default function SettingsScreen() {
     if (selectedChild) useChildrenStore.getState().setRegimeMode(selectedChild.id, regimeMode === 'custom' ? 'auto' : 'custom')
   }
 
-  async function reloadActive() {
-    const active = useChildrenStore.getState()
-    const act = active.children.find(c => c.id === active.activeChildId) || active.children[0]
-    if (act) await useEventsStore.getState().load(act.id)
-  }
-
   function removeChild(child: Child) {
     Alert.alert(`Удалить профиль «${child.name}»?`, 'Все его события будут удалены безвозвратно.', [
       { text: 'Отмена', style: 'cancel' },
@@ -51,7 +44,7 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await useChildrenStore.getState().remove(child.id)
-          await reloadActive()
+          await reloadStores()
           setTab(null)
         }
       }
@@ -70,8 +63,7 @@ export default function SettingsScreen() {
     try {
       const res = await importBackup({ replace })
       if (!res) return
-      await useChildrenStore.getState().load()
-      await reloadActive()
+      await reloadStores()
       setMessage(`Импортировано: детей — ${res.children}, событий — ${res.events}`)
     } catch (err: any) {
       setMessage(`Ошибка импорта: ${err.message}`)
@@ -80,7 +72,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={s.screen}>
-      <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
         <Card>
           <Text style={s.cardTitle}>Дети</Text>
           {/* Цветные вкладки детей + «＋» */}

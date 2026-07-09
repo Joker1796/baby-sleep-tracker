@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { View, Text, Pressable, Modal, ScrollView, TextInput, Alert, StyleSheet } from 'react-native'
+import { View, Text, Pressable, Modal, KeyboardAvoidingView, Platform, ScrollView, TextInput, Alert, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useEventsStore, useSorted, SleepEvent } from '../store/events'
@@ -59,8 +59,8 @@ export default function EventEditSheet({
     setTeeth(Array.isArray(model.teeth) ? [...model.teeth] : [])
   }, [model])
 
-  const typeDef = (EVENT_TYPES as any)[type] || EVENT_TYPES.sleep
-  const isInterval = typeDef.kind === 'interval'
+  const currentDef = (EVENT_TYPES as any)[type] || EVENT_TYPES.sleep
+  const isInterval = currentDef.kind === 'interval'
 
   // Список типов в выпадашке: доступные по возрасту, недавно использованные первыми.
   const childAgeM = child?.birthDate ? ageInMonths(child.birthDate) : null
@@ -92,8 +92,8 @@ export default function EventEditSheet({
       setError('Окончание должно быть позже начала')
       return
     }
-    const amt = typeDef.amountUnit && amount !== '' ? Number(amount) : null
-    const data: any = { type, startedAt: startMs, endedAt: endMs, note: note.trim(), kind: typeDef.kind, amount: amt }
+    const amt = currentDef.amountUnit && amount !== '' ? Number(amount) : null
+    const data: any = { type, startedAt: startMs, endedAt: endMs, note: note.trim(), kind: currentDef.kind, amount: amt }
     if (allowPlan) data.planned = planned
     if (type === 'teeth') data.teeth = [...teeth]
     const store = useEventsStore.getState()
@@ -118,118 +118,122 @@ export default function EventEditSheet({
 
   return (
     <Modal visible={!!model} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 18 }]} onPress={() => {}}>
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          <ScrollView>
-            <Text style={[s.h2, { fontSize: 19 }]}>{isNew ? 'Новое событие' : 'Изменить событие'}</Text>
+      {/* KAV поднимает шторку над клавиатурой на iOS (на Android это делает система). */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.kav}>
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 18 }]} onPress={() => {}}>
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={[s.h2, { fontSize: 19 }]}>{isNew ? 'Новое событие' : 'Изменить событие'}</Text>
 
-            {allowPlan && (
-              <View style={styles.field}>
-                <Text style={s.label}>Статус</Text>
-                <View style={styles.chips}>
-                  <Pressable onPress={() => setPlanned(false)} style={[s.chip, !planned && s.chipActive]}>
-                    <Text style={[s.chipText, !planned && s.chipActiveText]}>✓ Уже было</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setPlanned(true)} style={[s.chip, planned && s.chipActive]}>
-                    <Text style={[s.chipText, planned && s.chipActiveText]}>🎯 Запланировано</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {isNew && (
-              <View style={styles.field}>
-                <Text style={s.label}>Тип события</Text>
-                <View style={styles.chips}>
-                  {typeOptions.map((t: any) => {
-                    const active = type === t.id
-                    return (
-                      <Pressable
-                        key={t.id}
-                        onPress={() => setType(t.id)}
-                        style={[s.chip, active && s.chipActive]}
-                      >
-                        <Text style={[s.chipText, active && s.chipActiveText]}>
-                          {t.icon} {t.label}
-                        </Text>
-                      </Pressable>
-                    )
-                  })}
-                </View>
-              </View>
-            )}
-
-            <View style={styles.field}>
-              <Text style={s.label}>{isInterval ? 'Начало' : 'Время'}</Text>
-              <DateTimeInput value={startedAt} mode="datetime" onChange={setStartedAt} />
-            </View>
-
-            {isInterval && (
-              <>
-                <Pressable style={[styles.field, styles.checkRow]} onPress={toggleEnd}>
-                  <View style={[styles.checkbox, { borderColor: hasEnd ? colors.primary : colors.border, backgroundColor: hasEnd ? colors.primary : 'transparent' }]}>
-                    {hasEnd && <Ionicons name="checkmark" size={16} color="#fff" />}
+              {allowPlan && (
+                <View style={styles.field}>
+                  <Text style={s.label}>Статус</Text>
+                  <View style={styles.chips}>
+                    <Pressable onPress={() => setPlanned(false)} style={[s.chip, !planned && s.chipActive]}>
+                      <Text style={[s.chipText, !planned && s.chipActiveText]}>✓ Уже было</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setPlanned(true)} style={[s.chip, planned && s.chipActive]}>
+                      <Text style={[s.chipText, planned && s.chipActiveText]}>🎯 Запланировано</Text>
+                    </Pressable>
                   </View>
-                  <Text style={{ color: colors.text, fontSize: 15 }}>Уже закончилось</Text>
-                </Pressable>
-                {hasEnd && (
-                  <View style={styles.field}>
-                    <Text style={s.label}>Окончание</Text>
-                    <DateTimeInput value={endedAt || new Date(simNow())} mode="datetime" onChange={setEndedAt} />
-                  </View>
-                )}
-              </>
-            )}
+                </View>
+              )}
 
-            {typeDef.amountUnit && (
+              {isNew && (
+                <View style={styles.field}>
+                  <Text style={s.label}>Тип события</Text>
+                  <View style={styles.chips}>
+                    {typeOptions.map((t: any) => {
+                      const active = type === t.id
+                      return (
+                        <Pressable
+                          key={t.id}
+                          onPress={() => setType(t.id)}
+                          style={[s.chip, active && s.chipActive]}
+                        >
+                          <Text style={[s.chipText, active && s.chipActiveText]}>
+                            {t.icon} {t.label}
+                          </Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                </View>
+              )}
+
               <View style={styles.field}>
-                <Text style={s.label}>Количество, {typeDef.amountUnit}</Text>
+                <Text style={s.label}>{isInterval ? 'Начало' : 'Время'}</Text>
+                <DateTimeInput value={startedAt} mode="datetime" onChange={setStartedAt} />
+              </View>
+
+              {isInterval && (
+                <>
+                  <Pressable style={[styles.field, styles.checkRow]} onPress={toggleEnd}>
+                    <View style={[styles.checkbox, { borderColor: hasEnd ? colors.primary : colors.border, backgroundColor: hasEnd ? colors.primary : 'transparent' }]}>
+                      {hasEnd && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    </View>
+                    <Text style={{ color: colors.text, fontSize: 15 }}>Уже закончилось</Text>
+                  </Pressable>
+                  {hasEnd && (
+                    <View style={styles.field}>
+                      <Text style={s.label}>Окончание</Text>
+                      <DateTimeInput value={endedAt || new Date(simNow())} mode="datetime" onChange={setEndedAt} />
+                    </View>
+                  )}
+                </>
+              )}
+
+              {currentDef.amountUnit && (
+                <View style={styles.field}>
+                  <Text style={s.label}>Количество, {currentDef.amountUnit}</Text>
+                  <TextInput
+                    style={s.input}
+                    value={amount}
+                    onChangeText={setAmount}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.textSoft}
+                  />
+                </View>
+              )}
+
+              {type === 'teeth' && (
+                <View style={styles.field}>
+                  <Text style={s.label}>Прорезавшиеся зубы · {teeth.length}</Text>
+                  <ToothChart value={teeth} onChange={setTeeth} />
+                </View>
+              )}
+
+              <View style={styles.field}>
+                <Text style={s.label}>Заметка</Text>
                 <TextInput
                   style={s.input}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={currentDef.notePlaceholder || 'Необязательно'}
                   placeholderTextColor={colors.textSoft}
                 />
               </View>
-            )}
 
-            {type === 'teeth' && (
-              <View style={styles.field}>
-                <Text style={s.label}>Прорезавшиеся зубы · {teeth.length}</Text>
-                <ToothChart value={teeth} onChange={setTeeth} />
+              {error ? <Text style={[s.small, { color: colors.urgent, marginBottom: 8 }]}>{error}</Text> : null}
+
+              <View style={[s.row, { marginTop: 8 }]}>
+                {!isNew && <Btn title="Удалить" variant="danger" onPress={remove} />}
+                <View style={s.grow} />
+                <Btn title="Отмена" variant="secondary" onPress={onClose} />
+                <Btn title="Сохранить" onPress={save} />
               </View>
-            )}
-
-            <View style={styles.field}>
-              <Text style={s.label}>Заметка</Text>
-              <TextInput
-                style={s.input}
-                value={note}
-                onChangeText={setNote}
-                placeholder={typeDef.notePlaceholder || 'Необязательно'}
-                placeholderTextColor={colors.textSoft}
-              />
-            </View>
-
-            {error ? <Text style={[s.small, { color: colors.urgent, marginBottom: 8 }]}>{error}</Text> : null}
-
-            <View style={[s.row, { marginTop: 8 }]}>
-              {!isNew && <Btn title="Удалить" variant="danger" onPress={remove} />}
-              <View style={s.grow} />
-              <Btn title="Отмена" variant="secondary" onPress={onClose} />
-              <Btn title="Сохранить" onPress={save} />
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
 
 const styles = StyleSheet.create({
+  kav: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(10,12,24,0.45)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 18, paddingTop: 8, maxHeight: '88%' },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginVertical: 10 },

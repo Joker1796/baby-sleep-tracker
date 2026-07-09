@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useChildrenStore } from '../store/children'
-import { useEventsStore } from '../store/events'
-import { importBackup } from '../utils/backup'
+import { importBackup, reloadStores } from '../utils/backup'
 import ChildForm from '../components/ChildForm'
 import { Card, Btn } from '../components/ui'
 import { useTheme } from '../theme/ThemeProvider'
@@ -18,12 +16,7 @@ export default function OnboardingScreen() {
     try {
       const res = await importBackup({ replace: false })
       if (!res) return
-      await useChildrenStore.getState().load()
-      const first = useChildrenStore.getState().children[0]
-      if (first) {
-        useChildrenStore.getState().setActive(first.id)
-        await useEventsStore.getState().load(first.id)
-      }
+      await reloadStores()
       setMessage(`Импортировано: детей — ${res.children}, событий — ${res.events}`)
     } catch (err: any) {
       setMessage(`Ошибка импорта: ${err.message}`)
@@ -32,7 +25,7 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={[s.page, { paddingTop: 40 }]}>
+      <ScrollView contentContainerStyle={[s.page, { paddingTop: 40 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.heroIcon}>🌙</Text>
           <Text style={[styles.title, { color: colors.text }]}>Режим малыша</Text>

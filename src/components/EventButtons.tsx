@@ -8,7 +8,7 @@ import { formatDurationMin, ageInMonths } from '../logic/age'
 import { poopVerb } from '../logic/gender'
 import { dayCount } from '../logic/eventStats'
 import {
-  EVENT_TYPES,
+  typeDef,
   MAIN_BUTTON_TYPE_LIST,
   FEEDING_TYPE_IDS,
   getMainButtons
@@ -38,14 +38,13 @@ export default function EventButtons({
   // Кнопки главного: только выбранные и доступные по возрасту; кормление первым.
   const list: MainButton[] = getMainButtons(child).filter(
     (b: MainButton) =>
-      mainIds.has(b.type) &&
-      (ageM == null || (EVENT_TYPES as any)[b.type]?.minAgeM == null || ageM >= (EVENT_TYPES as any)[b.type].minAgeM)
+      mainIds.has(b.type) && (ageM == null || typeDef(b.type).minAgeM == null || ageM >= typeDef(b.type).minAgeM)
   )
   const feeds = FEEDING_TYPE_IDS.map((id: string) => list.find(b => b.type === id)).filter(Boolean) as MainButton[]
   const rest = list.filter(b => !feedingSet.has(b.type))
   const mainButtons = [...feeds, ...rest]
 
-  const typeOf = (t: string) => (EVENT_TYPES as any)[t] || { label: t, icon: '❓' }
+  const typeOf = typeDef
   const openOf = (b: MainButton) => (b.mode === 'time' ? selectOpenInterval(events, b.type) : null)
   const elapsed = (ev: SleepEvent) => formatDurationMin((now - ev.startedAt) / 60000)
   const countToday = (t: string) => dayCount(events, t, dayjs(now).startOf('day').valueOf())

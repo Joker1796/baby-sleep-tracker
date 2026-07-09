@@ -315,6 +315,12 @@ export function getMainButtons(child) {
   return Array.isArray(child?.mainButtons) ? child.mainButtons : DEFAULT_MAIN_BUTTONS
 }
 
+// Описание типа по id с безопасным fallback для неизвестных типов
+// (например, из импортированной резервной копии другой версии).
+export function typeDef(id) {
+  return EVENT_TYPES[id] || { id, label: id, icon: '❓', kind: 'point' }
+}
+
 // «Эффективный вид» события: сохранённый на записи kind, иначе — из реестра типов
 export function eventKind(e) {
   return e?.kind ?? EVENT_TYPES[e?.type]?.kind ?? 'point'

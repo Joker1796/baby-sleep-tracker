@@ -3,6 +3,8 @@ import * as Sharing from 'expo-sharing'
 import * as DocumentPicker from 'expo-document-picker'
 import dayjs from 'dayjs'
 import { listChildren, listAllEvents, replaceAll, mergeAll } from '../db'
+import { useChildrenStore, selectActiveChild } from '../store/children'
+import { useEventsStore } from '../store/events'
 
 const APP_ID = 'babySleepTracker'
 
@@ -47,4 +49,15 @@ export async function importBackup({ replace }: { replace: boolean }): Promise<{
   else await mergeAll(data.children, data.events)
 
   return { children: data.children.length, events: data.events.length }
+}
+
+// После импорта (или удаления профиля) перечитываем сторы из БД и события
+// актуального активного ребёнка. Общий шаг для онбординга и настроек.
+export async function reloadStores(): Promise<void> {
+  const children = useChildrenStore.getState()
+  await children.load()
+  const active = selectActiveChild(useChildrenStore.getState())
+  if (!active) return
+  if (useChildrenStore.getState().activeChildId !== active.id) children.setActive(active.id)
+  await useEventsStore.getState().load(active.id)
 }

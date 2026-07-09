@@ -88,12 +88,17 @@ export function selectSorted(events: SleepEvent[]): SleepEvent[] {
 }
 
 export function selectCurrentSleep(events: SleepEvent[]): SleepEvent | null {
-  return [...selectSorted(events)].reverse().find(e => e.type === 'sleep' && e.endedAt == null) || null
+  return selectOpenInterval(events, 'sleep')
 }
 
 // Незавершённый интервал заданного типа (идёт прямо сейчас), или null.
+// Из нескольких открытых берём начатый позже всех — за один проход, без копий.
 export function selectOpenInterval(events: SleepEvent[], type: string): SleepEvent | null {
-  return [...selectSorted(events)].reverse().find(e => e.type === type && e.endedAt == null) || null
+  let latest: SleepEvent | null = null
+  for (const e of events) {
+    if (e.type === type && e.endedAt == null && (!latest || e.startedAt > latest.startedAt)) latest = e
+  }
+  return latest
 }
 
 // Подписываемся на стабильную ссылку events, а производную (сортировку/поиск)

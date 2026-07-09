@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -18,10 +18,18 @@ const Tab = createBottomTabNavigator()
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
 // Иконка вкладки: заполненный вариант для активной, контурный — для неактивной.
+// Создаются один раз на уровне модуля — стабильные ссылки между рендерами.
 function tabIcon(base: string) {
   return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
     <Ionicons name={(focused ? base : `${base}-outline`) as IoniconName} size={size} color={color} />
   )
+}
+const TAB_ICONS = {
+  today: tabIcon('home'),
+  history: tabIcon('time'),
+  calendar: tabIcon('calendar'),
+  regime: tabIcon('options'),
+  settings: tabIcon('settings')
 }
 
 export default function RootNavigator() {
@@ -37,23 +45,27 @@ export default function RootNavigator() {
     if (activeId) useEventsStore.getState().load(activeId)
   }, [activeId])
 
+  // Стабильная ссылка на тему: NavigationContainer не пересчитывает дерево зря.
+  const navTheme = useMemo(
+    () => ({
+      dark,
+      colors: {
+        primary: colors.primary,
+        background: colors.bg,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.urgent
+      },
+      fonts: DefaultFonts
+    }),
+    [colors, dark]
+  )
+
   if (loaded && childCount === 0) return <OnboardingScreen />
 
   return (
-    <NavigationContainer
-      theme={{
-        dark,
-        colors: {
-          primary: colors.primary,
-          background: colors.bg,
-          card: colors.surface,
-          text: colors.text,
-          border: colors.border,
-          notification: colors.urgent
-        },
-        fonts: DefaultFonts
-      }}
-    >
+    <NavigationContainer theme={navTheme}>
       <Tab.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: colors.header },
@@ -67,17 +79,17 @@ export default function RootNavigator() {
         <Tab.Screen
           name="today"
           component={TodayScreen}
-          options={{ title: 'Сегодня', tabBarIcon: tabIcon('home') }}
+          options={{ title: 'Сегодня', tabBarIcon: TAB_ICONS.today }}
         />
         <Tab.Screen
           name="history"
           component={HistoryScreen}
-          options={{ title: 'История', tabBarIcon: tabIcon('time') }}
+          options={{ title: 'История', tabBarIcon: TAB_ICONS.history }}
         />
         <Tab.Screen
           name="calendar"
           component={CalendarScreen}
-          options={{ title: 'Календарь', tabBarIcon: tabIcon('calendar') }}
+          options={{ title: 'Календарь', tabBarIcon: TAB_ICONS.calendar }}
         />
         <Tab.Screen
           name="advice"
@@ -88,13 +100,13 @@ export default function RootNavigator() {
           <Tab.Screen
             name="regime"
             component={RegimeScreen}
-            options={{ title: 'Мой режим', tabBarIcon: tabIcon('options') }}
+            options={{ title: 'Мой режим', tabBarIcon: TAB_ICONS.regime }}
           />
         )}
         <Tab.Screen
           name="settings"
           component={SettingsScreen}
-          options={{ title: 'Настройки', tabBarIcon: tabIcon('settings') }}
+          options={{ title: 'Настройки', tabBarIcon: TAB_ICONS.settings }}
         />
       </Tab.Navigator>
     </NavigationContainer>
