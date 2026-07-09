@@ -33,9 +33,7 @@ export default function ChildForm({
   const [color, setColor] = useState<string>(child?.color || CHILD_COLORS[childCount % CHILD_COLORS.length])
   const [feeding, setFeeding] = useState<string>(child?.feeding || 'breast')
   const [aids, setAids] = useState<string[]>([...(child?.aids || [])])
-  const [mainButtons, setMainButtons] = useState<MainButton[]>(
-    getMainButtons(child).map((b: MainButton) => ({ ...b }))
-  )
+  const [mainButtons, setMainButtons] = useState<MainButton[]>(getMainButtons(child).map((b: MainButton) => ({ ...b })))
   const [hideHints, setHideHints] = useState<boolean>(child?.hideHints || false)
   const [error, setError] = useState('')
 
@@ -131,10 +129,7 @@ export default function ChildForm({
             const showModes = enabled && (t.kind === 'interval' || t.canTime)
             return (
               <View key={t.id} style={styles.mbRow}>
-                <Pressable
-                  onPress={() => toggleType(t)}
-                  style={[s.chip, enabled && s.chipActive, styles.mbToggle]}
-                >
+                <Pressable onPress={() => toggleType(t)} style={[s.chip, enabled && s.chipActive, styles.mbToggle]}>
                   <Text style={[s.chipText, enabled && s.chipActiveText]}>
                     {t.icon} {t.btnLabel || t.label}
                   </Text>
@@ -206,9 +201,7 @@ export default function ChildForm({
         <Btn title={child ? 'Сохранить' : 'Добавить'} onPress={save} style={s.grow} />
       </View>
 
-      {child && onDelete && (
-        <Btn title="🗑 Удалить ребёнка" variant="danger" block onPress={onDelete} style={{ marginTop: 10 }} />
-      )}
+      {child && onDelete && <Btn title="🗑 Удалить ребёнка" variant="danger" block onPress={onDelete} style={{ marginTop: 10 }} />}
     </View>
   )
 }

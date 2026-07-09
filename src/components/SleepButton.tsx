@@ -36,20 +36,12 @@ export default function SleepButton() {
       onPress={toggle}
       style={({ pressed }) => [
         styles.btn,
-        sleeping
-          ? { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.sleep }
-          : { backgroundColor: colors.sleep },
+        sleeping ? { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.sleep } : { backgroundColor: colors.sleep },
         pressed && { transform: [{ scale: 0.98 }] }
       ]}
     >
-      <Ionicons
-        name={sleeping ? 'sunny' : 'moon'}
-        size={30}
-        color={sleeping ? colors.sleep : '#fff'}
-      />
-      <Text style={[styles.main, { color: sleeping ? colors.text : '#fff' }]}>
-        {sleeping ? wakeWord : sleepWord}
-      </Text>
+      <Ionicons name={sleeping ? 'sunny' : 'moon'} size={30} color={sleeping ? colors.sleep : '#fff'} />
+      <Text style={[styles.main, { color: sleeping ? colors.text : '#fff' }]}>{sleeping ? wakeWord : sleepWord}</Text>
     </Pressable>
   )
 }

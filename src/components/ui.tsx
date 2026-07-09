@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Animated, View, Text, Pressable, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -28,18 +28,9 @@ export function Btn({ title, onPress, variant = 'primary', block, disabled, styl
     disabled && { opacity: 0.5 },
     style
   ]
-  const label = [
-    s.btnText,
-    variant === 'secondary' && s.btnSecondaryText,
-    variant === 'danger' && s.btnDangerText,
-    textStyle
-  ]
+  const label = [s.btnText, variant === 'secondary' && s.btnSecondaryText, variant === 'danger' && s.btnDangerText, textStyle]
   return (
-    <Pressable
-      style={({ pressed }) => [containerStyle, pressed && { opacity: 0.8 }]}
-      onPress={onPress}
-      disabled={disabled}
-    >
+    <Pressable style={({ pressed }) => [containerStyle, pressed && { opacity: 0.8 }]} onPress={onPress} disabled={disabled}>
       <Text style={label}>{title}</Text>
     </Pressable>
   )
@@ -61,12 +52,14 @@ export function KeyValueRow({ label, value, mutedLabel = true }: { label: string
 // Пустое message запускает fade-out; текст держим до конца анимации.
 export function Toast({ message, bottom }: { message: string; bottom: number }) {
   const { colors } = useTheme()
+  // Animated.Value в state (не в ref): стабильный экземпляр без чтения ref в рендере.
+  const [progress] = useState(() => new Animated.Value(0))
   const [shown, setShown] = useState(message)
-  const progress = useRef(new Animated.Value(0)).current
+  // «Производное состояние» обновляем прямо в рендере (паттерн из доков React).
+  if (message && message !== shown) setShown(message)
 
   useEffect(() => {
     if (message) {
-      setShown(message)
       Animated.spring(progress, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }).start()
     } else {
       Animated.timing(progress, { toValue: 0, duration: 160, useNativeDriver: true }).start(({ finished }) => {

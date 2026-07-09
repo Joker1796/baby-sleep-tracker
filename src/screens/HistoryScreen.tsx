@@ -48,7 +48,9 @@ export default function HistoryScreen() {
         value = `${evs.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} ${t.amountUnit}`
       } else if (t.amountUnit && t.amountAgg === 'last') {
         const withAmt = evs.filter(e => e.amount != null)
-        value = withAmt.length ? `${withAmt[withAmt.length - 1].amount} ${t.amountUnit}` : `${evs.length} ${plural(evs.length, 'раз', 'раза', 'раз')}`
+        value = withAmt.length
+          ? `${withAmt[withAmt.length - 1].amount} ${t.amountUnit}`
+          : `${evs.length} ${plural(evs.length, 'раз', 'раза', 'раз')}`
       } else if (evs.some(e => eventKind(e) === 'interval')) {
         value = formatDurationMin(dayTotalMin(events, t.id, dayTs, now))
       } else {
@@ -68,7 +70,12 @@ export default function HistoryScreen() {
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.dayNav}>
-          <Pressable onPress={() => setDayOffset(d => d - 1)} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Предыдущий день">
+          <Pressable
+            onPress={() => setDayOffset(d => d - 1)}
+            style={[styles.arrow, { backgroundColor: colors.surface }]}
+            accessibilityRole="button"
+            accessibilityLabel="Предыдущий день"
+          >
             <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </Pressable>
           <View style={styles.dayLabel}>
@@ -88,10 +95,7 @@ export default function HistoryScreen() {
 
         <Card>
           <Text style={[s.cardTitle, { marginBottom: 8 }]}>Сводка за день</Text>
-          <KeyValueRow
-            label="Среднее бодрствование"
-            value={summary.wakeWindowMin > 0 ? formatDurationMin(summary.wakeWindowMin) : '—'}
-          />
+          <KeyValueRow label="Среднее бодрствование" value={summary.wakeWindowMin > 0 ? formatDurationMin(summary.wakeWindowMin) : '—'} />
           <KeyValueRow
             label="Дневной сон"
             value={`${formatDurationMin(summary.daySleepMin)} · ${summary.napCount} ${plural(summary.napCount, 'сон', 'сна', 'снов')}`}

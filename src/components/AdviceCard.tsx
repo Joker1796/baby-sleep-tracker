@@ -7,18 +7,9 @@ import { radiusSm } from '../theme/colors'
 
 const ICONS: Record<number, string> = { 3: '⚠️', 2: '💛', 1: '💡' }
 
-export default function AdviceCard({
-  advice,
-  dismissible,
-  onDismiss
-}: {
-  advice: Advice
-  dismissible?: boolean
-  onDismiss?: () => void
-}) {
+export default function AdviceCard({ advice, dismissible, onDismiss }: { advice: Advice; dismissible?: boolean; onDismiss?: () => void }) {
   const { colors } = useTheme()
-  const bg =
-    advice.priority === 3 ? colors.urgentSoft : advice.priority === 2 ? colors.warnSoft : colors.infoSoft
+  const bg = advice.priority === 3 ? colors.urgentSoft : advice.priority === 2 ? colors.warnSoft : colors.infoSoft
 
   return (
     <View style={[styles.advice, { backgroundColor: bg }, dismissible && { paddingRight: 34 }]}>

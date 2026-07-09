@@ -293,9 +293,7 @@ export const CALENDAR_TYPE_IDS = ['vaccination', 'doctor', 'vitaminD', 'nails', 
 export const CALENDAR_TYPE_LIST = CALENDAR_TYPE_IDS.map(id => EVENT_TYPES[id])
 
 // Типы, доступные в пикере «Кнопки на главном экране» (без сна и без календарных)
-export const MAIN_BUTTON_TYPE_LIST = EVENT_TYPE_LIST.filter(
-  t => t.id !== 'sleep' && !CALENDAR_TYPE_IDS.includes(t.id)
-)
+export const MAIN_BUTTON_TYPE_LIST = EVENT_TYPE_LIST.filter(t => t.id !== 'sleep' && !CALENDAR_TYPE_IDS.includes(t.id))
 
 // Все события, кроме сна — для строк плашки «Истории» (в порядке реестра)
 export const NON_SLEEP_TYPE_LIST = EVENT_TYPE_LIST.filter(t => t.id !== 'sleep')

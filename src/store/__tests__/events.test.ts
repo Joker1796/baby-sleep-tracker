@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useEventsStore, selectOpenInterval, selectCurrentSleep, selectSorted } from '../events'
 
 const db = vi.hoisted(() => {
   let rows: Record<string, any> = {}
@@ -30,8 +31,6 @@ vi.mock('../../time/now', () => ({
   simNow: () => time.now,
   touchNow: () => {}
 }))
-
-import { useEventsStore, selectOpenInterval, selectCurrentSleep, selectSorted } from '../events'
 
 function reset() {
   db.reset()
@@ -78,9 +77,7 @@ describe('events store', () => {
       await new Promise(r => setTimeout(r, 30))
       return [{ id: 'a', childId: 'A', type: 'sleep', startedAt: 1, endedAt: null, note: '' }]
     })
-    db.listEvents.mockImplementationOnce(async () => [
-      { id: 'b', childId: 'B', type: 'sleep', startedAt: 2, endedAt: null, note: '' }
-    ])
+    db.listEvents.mockImplementationOnce(async () => [{ id: 'b', childId: 'B', type: 'sleep', startedAt: 2, endedAt: null, note: '' }])
     const store = useEventsStore.getState()
     await Promise.all([store.load('A'), store.load('B')])
     expect(useEventsStore.getState().loadedFor).toBe('B')
@@ -89,8 +86,14 @@ describe('events store', () => {
 })
 
 describe('селекторы', () => {
-  const mk = (id: string, type: string, startedAt: number, endedAt: number | null = null) =>
-    ({ id, childId: 'c', type, startedAt, endedAt, note: '' })
+  const mk = (id: string, type: string, startedAt: number, endedAt: number | null = null) => ({
+    id,
+    childId: 'c',
+    type,
+    startedAt,
+    endedAt,
+    note: ''
+  })
 
   it('selectSorted сортирует по startedAt, не мутируя исходный массив', () => {
     const events = [mk('b', 'sleep', 200), mk('a', 'sleep', 100)]

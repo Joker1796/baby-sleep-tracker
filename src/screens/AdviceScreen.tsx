@@ -44,9 +44,7 @@ export default function AdviceScreen() {
         <View style={[s.row, { marginBottom: 8 }]}>
           <Text style={[s.cardTitle, s.grow, { marginBottom: 0 }]}>База знаний</Text>
           <Pressable onPress={() => setShowAllAges(v => !v)} style={[s.chip, showAllAges && s.chipActive]}>
-            <Text style={[s.chipText, showAllAges && s.chipActiveText]}>
-              {showAllAges ? 'Все возрасты' : 'По возрасту'}
-            </Text>
+            <Text style={[s.chipText, showAllAges && s.chipActiveText]}>{showAllAges ? 'Все возрасты' : 'По возрасту'}</Text>
           </Pressable>
         </View>
 

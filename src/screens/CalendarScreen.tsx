@@ -27,10 +27,7 @@ export default function CalendarScreen() {
   const [sheetModel, setSheetModel] = useState<EventModel>(null)
   const [showPalette, setShowPalette] = useState(false)
 
-  const calEvents = useMemo(
-    () => events.filter(e => CALENDAR_TYPE_IDS.includes(e.type)),
-    [events]
-  )
+  const calEvents = useMemo(() => events.filter(e => CALENDAR_TYPE_IDS.includes(e.type)), [events])
 
   // Число месяца → события этого дня (в текущем месяце)
   const byDay = useMemo(() => {
@@ -77,11 +74,27 @@ export default function CalendarScreen() {
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.page, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.nav}>
-          <Pressable onPress={() => { setMonth(month.subtract(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Предыдущий месяц">
+          <Pressable
+            onPress={() => {
+              setMonth(month.subtract(1, 'month'))
+              setSelectedDay(null)
+            }}
+            style={[styles.arrow, { backgroundColor: colors.surface }]}
+            accessibilityRole="button"
+            accessibilityLabel="Предыдущий месяц"
+          >
             <Ionicons name="chevron-back" size={22} color={colors.primary} />
           </Pressable>
           <Text style={[styles.title, { color: colors.text }]}>{month.format('MMMM YYYY')}</Text>
-          <Pressable onPress={() => { setMonth(month.add(1, 'month')); setSelectedDay(null) }} style={[styles.arrow, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Следующий месяц">
+          <Pressable
+            onPress={() => {
+              setMonth(month.add(1, 'month'))
+              setSelectedDay(null)
+            }}
+            style={[styles.arrow, { backgroundColor: colors.surface }]}
+            accessibilityRole="button"
+            accessibilityLabel="Следующий месяц"
+          >
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />
           </Pressable>
         </View>
@@ -110,7 +123,9 @@ export default function CalendarScreen() {
                       sel && { borderWidth: 2, borderColor: colors.primary }
                     ]}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: done || planned ? '800' : '600', color: done ? colors.primary : colors.text }}>{c}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: done || planned ? '800' : '600', color: done ? colors.primary : colors.text }}>
+                      {c}
+                    </Text>
                   </View>
                 </Pressable>
               )
@@ -120,9 +135,7 @@ export default function CalendarScreen() {
 
         <Card>
           <View style={[s.row, { alignItems: 'center', marginBottom: 8 }]}>
-            <Text style={{ fontWeight: '700', color: colors.text, flex: 1 }}>
-              {selectedDay ? selectedDay.format('D MMMM') : 'Сегодня'}
-            </Text>
+            <Text style={{ fontWeight: '700', color: colors.text, flex: 1 }}>{selectedDay ? selectedDay.format('D MMMM') : 'Сегодня'}</Text>
             <Pressable
               onPress={() => {
                 animateLayout()
@@ -137,9 +150,15 @@ export default function CalendarScreen() {
           {showPalette && (
             <View style={styles.palette}>
               {CALENDAR_TYPE_LIST.map((t: any) => (
-                <Pressable key={t.id} onPress={() => addType(t.id)} style={[styles.paletteBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+                <Pressable
+                  key={t.id}
+                  onPress={() => addType(t.id)}
+                  style={[styles.paletteBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+                >
                   <Text style={{ fontSize: 22 }}>{t.icon}</Text>
-                  <Text style={{ fontSize: 10.5, fontWeight: '600', color: colors.textSoft, textAlign: 'center' }}>{t.btnLabel || t.label}</Text>
+                  <Text style={{ fontSize: 10.5, fontWeight: '600', color: colors.textSoft, textAlign: 'center' }}>
+                    {t.btnLabel || t.label}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -155,7 +174,7 @@ export default function CalendarScreen() {
               <View style={s.grow}>
                 <Text style={{ fontWeight: '600', fontSize: 14, color: colors.text }}>
                   {typeDef(e.type).label}
-                  {e.planned ? <Text style={[s.muted, s.small]}>  · план</Text> : null}
+                  {e.planned ? <Text style={[s.muted, s.small]}> · план</Text> : null}
                 </Text>
                 {detailOf(e) ? <Text style={[s.muted, s.small]}>{detailOf(e)}</Text> : null}
               </View>
@@ -165,12 +184,7 @@ export default function CalendarScreen() {
         </Card>
       </ScrollView>
 
-      <EventEditSheet
-        model={sheetModel}
-        types={CALENDAR_TYPE_LIST}
-        allowPlan
-        onClose={() => setSheetModel(null)}
-      />
+      <EventEditSheet model={sheetModel} types={CALENDAR_TYPE_LIST} allowPlan onClose={() => setSheetModel(null)} />
     </View>
   )
 }
@@ -184,6 +198,16 @@ const styles = StyleSheet.create({
   wd: { fontSize: 11, fontWeight: '600' },
   num: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   palette: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  paletteBtn: { width: '22%', flexGrow: 1, alignItems: 'center', gap: 3, paddingVertical: 8, borderRadius: radiusSm, borderWidth: 1, minHeight: 58, justifyContent: 'center' },
+  paletteBtn: {
+    width: '22%',
+    flexGrow: 1,
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 8,
+    borderRadius: radiusSm,
+    borderWidth: 1,
+    minHeight: 58,
+    justifyContent: 'center'
+  },
   evRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, minHeight: 52 }
 })

@@ -53,10 +53,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
   const visiblePlanned = plansExpanded ? plannedEvents : plannedEvents.slice(0, 3)
 
   // Напоминание за 2 часа (только при нескольких детях)
-  const soon =
-    childCount > 1
-      ? plannedEvents.find(e => e.startedAt >= now && e.startedAt <= now + 2 * 60 * 60 * 1000)
-      : null
+  const soon = childCount > 1 ? plannedEvents.find(e => e.startedAt >= now && e.startedAt <= now + 2 * 60 * 60 * 1000) : null
   const soonInfo = soon
     ? {
         icon: typeDef(soon.type).icon || '📌',
@@ -68,8 +65,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
 
   const headline = phase === 'active' && plannedEvents.length ? 'Планы' : guidance.headline
 
-  const toneColor =
-    phase === 'time-to-sleep' ? colors.urgent : phase === 'wind-down' || phase === 'settling' ? colors.warn : colors.primary
+  const toneColor = phase === 'time-to-sleep' ? colors.urgent : phase === 'wind-down' || phase === 'settling' ? colors.warn : colors.primary
   const icon = PHASE_ICON[phase] || '💡'
 
   const settling = useSettlingStore
@@ -130,15 +126,11 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
               )
             })}
           </View>
-          {openActivity !== null && (
-            <Text style={[styles.ideaText, { color: colors.text }]}>{guidance.activities[openActivity].text}</Text>
-          )}
+          {openActivity !== null && <Text style={[styles.ideaText, { color: colors.text }]}>{guidance.activities[openActivity].text}</Text>}
         </View>
       )}
 
-      {guidance.wakeChecklist.length > 0 && (
-        <WakeChecklist items={guidance.wakeChecklist} wakeSince={guidance.wakeSince} />
-      )}
+      {guidance.wakeChecklist.length > 0 && <WakeChecklist items={guidance.wakeChecklist} wakeSince={guidance.wakeSince} />}
 
       {/* Напоминание за 2 часа (при нескольких детях) */}
       {soonInfo && (
@@ -192,9 +184,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
         </>
       )}
 
-      {guidance.showStartSettling && (
-        <Btn title="🌙 Начать укладывание" block onPress={startSettling} style={{ marginTop: 6 }} />
-      )}
+      {guidance.showStartSettling && <Btn title="🌙 Начать укладывание" block onPress={startSettling} style={{ marginTop: 6 }} />}
 
       {/* Укладывание */}
       {phase === 'settling' && (
@@ -265,7 +255,16 @@ const styles = StyleSheet.create({
   twoBtn: { flexDirection: 'row', gap: 10, marginTop: 8 },
   grow: { flex: 1 },
   locOptions: { gap: 8, marginVertical: 6, marginBottom: 12 },
-  locBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: 52, borderRadius: radiusSm, borderWidth: 1 },
+  locBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minHeight: 52,
+    borderRadius: radiusSm,
+    borderWidth: 1
+  },
   locIcon: { fontSize: 22 },
   locLabel: { fontSize: 15, fontWeight: '600' },
   backBtn: { width: 40, height: 40, marginTop: 10, borderRadius: radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

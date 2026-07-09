@@ -20,9 +20,11 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 // Иконка вкладки: заполненный вариант для активной, контурный — для неактивной.
 // Создаются один раз на уровне модуля — стабильные ссылки между рендерами.
 function tabIcon(base: string) {
-  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-    <Ionicons name={(focused ? base : `${base}-outline`) as IoniconName} size={size} color={color} />
-  )
+  function TabBarIcon({ color, size, focused }: { color: string; size: number; focused: boolean }) {
+    return <Ionicons name={(focused ? base : `${base}-outline`) as IoniconName} size={size} color={color} />
+  }
+  TabBarIcon.displayName = `TabBarIcon(${base})`
+  return TabBarIcon
 }
 const TAB_ICONS = {
   today: tabIcon('home'),
@@ -76,38 +78,18 @@ export default function RootNavigator() {
           tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border }
         }}
       >
-        <Tab.Screen
-          name="today"
-          component={TodayScreen}
-          options={{ title: 'Сегодня', tabBarIcon: TAB_ICONS.today }}
-        />
-        <Tab.Screen
-          name="history"
-          component={HistoryScreen}
-          options={{ title: 'История', tabBarIcon: TAB_ICONS.history }}
-        />
-        <Tab.Screen
-          name="calendar"
-          component={CalendarScreen}
-          options={{ title: 'Календарь', tabBarIcon: TAB_ICONS.calendar }}
-        />
+        <Tab.Screen name="today" component={TodayScreen} options={{ title: 'Сегодня', tabBarIcon: TAB_ICONS.today }} />
+        <Tab.Screen name="history" component={HistoryScreen} options={{ title: 'История', tabBarIcon: TAB_ICONS.history }} />
+        <Tab.Screen name="calendar" component={CalendarScreen} options={{ title: 'Календарь', tabBarIcon: TAB_ICONS.calendar }} />
         <Tab.Screen
           name="advice"
           component={AdviceScreen}
           options={{ title: 'Советы', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
         />
         {customRegime && (
-          <Tab.Screen
-            name="regime"
-            component={RegimeScreen}
-            options={{ title: 'Мой режим', tabBarIcon: TAB_ICONS.regime }}
-          />
+          <Tab.Screen name="regime" component={RegimeScreen} options={{ title: 'Мой режим', tabBarIcon: TAB_ICONS.regime }} />
         )}
-        <Tab.Screen
-          name="settings"
-          component={SettingsScreen}
-          options={{ title: 'Настройки', tabBarIcon: TAB_ICONS.settings }}
-        />
+        <Tab.Screen name="settings" component={SettingsScreen} options={{ title: 'Настройки', tabBarIcon: TAB_ICONS.settings }} />
       </Tab.Navigator>
     </NavigationContainer>
   )

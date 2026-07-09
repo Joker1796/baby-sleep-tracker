@@ -6,13 +6,7 @@ import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { useActiveChild, useChildrenStore } from '../store/children'
 import { useSorted, useCurrentSleep } from '../store/events'
-import {
-  useSettlingStore,
-  useSettlingSession,
-  useNapExtension,
-  useDismissedToday,
-  useDismissedAdvice
-} from '../store/settling'
+import { useSettlingStore, useSettlingSession, useNapExtension, useDismissedToday, useDismissedAdvice } from '../store/settling'
 import { useNow } from '../time/now'
 import { buildGuidance, Guidance } from '../logic/guidance'
 import { formatDurationMin, plural, ageInMonths } from '../logic/age'
@@ -59,9 +53,12 @@ export default function TodayScreen() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(''), 2200)
   }
-  useEffect(() => () => {
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-  }, [])
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    },
+    []
+  )
 
   const guidance = useMemo<Guidance | null>(() => {
     if (!child) return null
@@ -88,7 +85,11 @@ export default function TodayScreen() {
   const wokeWord = wakeVerb(child?.gender).toLowerCase()
   let status: { icon: string; title: string; sub: string | null }
   if (st.sleeping) {
-    status = { icon: '😴', title: `Спит ${formatDurationMin(st.sleepingMin)}`, sub: `${sleptWord} в ${dayjs(st.sleeping.startedAt).format('HH:mm')}` }
+    status = {
+      icon: '😴',
+      title: `Спит ${formatDurationMin(st.sleepingMin)}`,
+      sub: `${sleptWord} в ${dayjs(st.sleeping.startedAt).format('HH:mm')}`
+    }
   } else if (isNightWaking && st.lastWakeAt != null) {
     status = { icon: '🌙', title: 'Ночное пробуждение', sub: `${wokeWord} в ${dayjs(st.lastWakeAt).format('HH:mm')} · уложите обратно` }
   } else if (st.awakeMin != null) {
@@ -113,9 +114,7 @@ export default function TodayScreen() {
 
   const dismissedToday = dismissedAdvice && dismissedAdvice.date === new Date(now).toDateString() ? dismissedAdvice.ids : []
   const secondaryAdvices = advice.advices.filter(a => !a.general).slice(0, 4)
-  const visibleAdvices = hideHints
-    ? []
-    : secondaryAdvices.filter(a => !a.profile || !dismissedToday.includes(a.id))
+  const visibleAdvices = hideHints ? [] : secondaryAdvices.filter(a => !a.profile || !dismissedToday.includes(a.id))
 
   const regimeMode = child.regime?.mode || 'auto'
   function toggleRegime() {
@@ -131,7 +130,13 @@ export default function TodayScreen() {
 
         {milestone && (
           <Card style={[styles.milestone, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('milestone', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть поздравление">
+            <Pressable
+              style={styles.cardClose}
+              hitSlop={8}
+              onPress={() => settling().dismiss('milestone', child.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Скрыть поздравление"
+            >
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 30 }}>{milestone.isYear ? '🎂' : '🎉'}</Text>
@@ -139,13 +144,17 @@ export default function TodayScreen() {
           </Card>
         )}
 
-        {greeting && (
-          <DayGreeting greeting={greeting} onDismiss={() => settling().dismiss('greeting', child.id)} />
-        )}
+        {greeting && <DayGreeting greeting={greeting} onDismiss={() => settling().dismiss('greeting', child.id)} />}
 
         {!(child.aids && child.aids.length) && !aidsHintDismissed && (
           <Card style={[styles.aidsHint, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('aidsHint', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть подсказку о настройках">
+            <Pressable
+              style={styles.cardClose}
+              hitSlop={8}
+              onPress={() => settling().dismiss('aidsHint', child.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Скрыть подсказку о настройках"
+            >
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 24 }}>⚙️</Text>
@@ -171,7 +180,10 @@ export default function TodayScreen() {
               onPress={toggleRegime}
               style={[
                 styles.regimeToggle,
-                { borderColor: regimeMode === 'custom' ? colors.primary : colors.border, backgroundColor: regimeMode === 'custom' ? colors.primarySoft : colors.surface2 }
+                {
+                  borderColor: regimeMode === 'custom' ? colors.primary : colors.border,
+                  backgroundColor: regimeMode === 'custom' ? colors.primarySoft : colors.surface2
+                }
               ]}
             >
               <Text style={{ color: regimeMode === 'custom' ? colors.primary : colors.textSoft, fontSize: 12, fontWeight: '600' }}>
@@ -212,7 +224,13 @@ export default function TodayScreen() {
 
         {encouragement && (
           <Card style={[styles.support, { backgroundColor: colors.medicineSoft }]}>
-            <Pressable style={styles.cardClose} hitSlop={8} onPress={() => settling().dismiss('encouragement', child.id)} accessibilityRole="button" accessibilityLabel="Скрыть поддержку">
+            <Pressable
+              style={styles.cardClose}
+              hitSlop={8}
+              onPress={() => settling().dismiss('encouragement', child.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Скрыть поддержку"
+            >
               <Ionicons name="close" size={22} color={colors.textSoft} />
             </Pressable>
             <Text style={{ fontSize: 26 }}>💛</Text>
@@ -220,9 +238,7 @@ export default function TodayScreen() {
           </Card>
         )}
 
-        {guidance.phase !== 'active' && (
-          <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />
-        )}
+        {guidance.phase !== 'active' && <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />}
 
         {guidance.showExtendNap && (
           <Btn title="🔁 Продлить сон" block onPress={() => settling().startExtension(child.id)} style={{ marginBottom: 12 }} />
@@ -231,9 +247,7 @@ export default function TodayScreen() {
         {showSleepButton && <SleepButton />}
         <EventButtons onLogged={showToast} onEdit={setSheetModel} />
 
-        {guidance.phase === 'active' && (
-          <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />
-        )}
+        {guidance.phase === 'active' && <SettlingFlow guidance={guidance} onSlept={() => showToast('Сладких снов 💤')} />}
 
         {visibleAdvices.length > 0 && (
           <>
@@ -265,7 +279,15 @@ const styles = StyleSheet.create({
   aidsHint: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: 1, position: 'relative', paddingRight: 34 },
   milestoneText: { flex: 1, fontSize: 16, fontWeight: '700' },
   statusTitle: { fontSize: 19, fontWeight: '700' },
-  regimeToggle: { paddingVertical: 6, paddingHorizontal: 10, minHeight: 30, borderRadius: 999, borderWidth: 1, alignSelf: 'flex-start', justifyContent: 'center' },
+  regimeToggle: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minHeight: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    justifyContent: 'center'
+  },
   ww: { marginTop: 12 },
   wwBar: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   wwFill: { height: '100%', borderRadius: 4 },

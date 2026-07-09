@@ -11,9 +11,7 @@ function cap(str) {
 export function summarizeDay({ summary, tummyMin = 0, poopCount = 0, ageM = 6, isToday = false, gender = null }) {
   const s = summary
   if (s.totalSleepMin === 0 && tummyMin === 0 && poopCount === 0) {
-    return isToday
-      ? 'За сегодня пока нет отметок — отмечайте сон и события, и здесь появится сводка дня.'
-      : 'За этот день отметок нет.'
+    return isToday ? 'За сегодня пока нет отметок — отмечайте сон и события, и здесь появится сводка дня.' : 'За этот день отметок нет.'
   }
 
   const norms = getNorms(ageM)

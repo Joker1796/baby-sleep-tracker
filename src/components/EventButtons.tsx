@@ -7,24 +7,13 @@ import { useNow, simNow } from '../time/now'
 import { formatDurationMin, ageInMonths } from '../logic/age'
 import { poopVerb } from '../logic/gender'
 import { dayCount } from '../logic/eventStats'
-import {
-  typeDef,
-  MAIN_BUTTON_TYPE_LIST,
-  FEEDING_TYPE_IDS,
-  getMainButtons
-} from '../data/eventTypes'
+import { typeDef, MAIN_BUTTON_TYPE_LIST, FEEDING_TYPE_IDS, getMainButtons } from '../data/eventTypes'
 import { hapticTap } from '../utils/haptics'
 import { useTheme } from '../theme/ThemeProvider'
 import { eventColors } from '../theme/eventColor'
 import { radiusSm } from '../theme/colors'
 
-export default function EventButtons({
-  onLogged,
-  onEdit
-}: {
-  onLogged: (msg: string) => void
-  onEdit: (model: any) => void
-}) {
+export default function EventButtons({ onLogged, onEdit }: { onLogged: (msg: string) => void; onEdit: (model: any) => void }) {
   const { colors } = useTheme()
   const child = useActiveChild()
   const now = useNow()
@@ -36,8 +25,7 @@ export default function EventButtons({
 
   // Кнопки главного: только выбранные и доступные по возрасту; кормление первым.
   const list: MainButton[] = getMainButtons(child).filter(
-    (b: MainButton) =>
-      mainIds.has(b.type) && (ageM == null || typeDef(b.type).minAgeM == null || ageM >= typeDef(b.type).minAgeM)
+    (b: MainButton) => mainIds.has(b.type) && (ageM == null || typeDef(b.type).minAgeM == null || ageM >= typeDef(b.type).minAgeM)
   )
   const feeds = FEEDING_TYPE_IDS.map((id: string) => list.find(b => b.type === id)).filter(Boolean) as MainButton[]
   const rest = list.filter(b => !feedingSet.has(b.type))

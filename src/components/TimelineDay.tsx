@@ -12,13 +12,7 @@ import { analyzeDay } from '../logic/sleepAnalyzer'
 import { useTheme } from '../theme/ThemeProvider'
 import { eventColors } from '../theme/eventColor'
 
-export default function TimelineDay({
-  dayTs,
-  onEdit
-}: {
-  dayTs: number
-  onEdit: (e: SleepEvent) => void
-}) {
+export default function TimelineDay({ dayTs, onEdit }: { dayTs: number; onEdit: (e: SleepEvent) => void }) {
   const { colors } = useTheme()
   const child = useActiveChild()
   const now = useNow()
@@ -100,9 +94,7 @@ export default function TimelineDay({
             <View style={styles.body}>
               <View style={styles.titleRow}>
                 <Text style={[styles.title, { color: colors.text }]}>{labelOf(e)}</Text>
-                {ongoing && (
-                  <Text style={[styles.ongoing, { color: colors.walk, backgroundColor: colors.walkSoft }]}>идёт</Text>
-                )}
+                {ongoing && <Text style={[styles.ongoing, { color: colors.walk, backgroundColor: colors.walkSoft }]}>идёт</Text>}
               </View>
               <Text style={[styles.time, { color: colors.textSoft }]}>
                 {timeLabel(e)}
@@ -122,7 +114,15 @@ export default function TimelineDay({
 
 const styles = StyleSheet.create({
   empty: { fontSize: 13, paddingVertical: 8, paddingHorizontal: 2 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, minHeight: 56 },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    minHeight: 56
+  },
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, gap: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

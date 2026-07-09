@@ -38,8 +38,7 @@ export function morningWake(events, dayStart, now = Date.now()) {
   const noon = dayStart.add(12, 'hour').valueOf()
   // Ночная/ранняя сессия, начавшаяся до утра и закончившаяся до полудня
   const enders = sleepSessions(events)
-    .filter(s => s.endedAt != null && s.startedAt < dayWindowFrom &&
-      s.endedAt > dayStartTs && s.endedAt <= noon)
+    .filter(s => s.endedAt != null && s.startedAt < dayWindowFrom && s.endedAt > dayStartTs && s.endedAt <= noon)
     .map(s => s.endedAt)
   return enders.length ? Math.max(...enders) : dayWindowFrom
 }
@@ -75,31 +74,24 @@ export function analyzeDay(events, dateTs, now = Date.now()) {
   const dayStart = dayjs(dateTs).startOf('day')
   const dayEnd = dayStart.add(1, 'day')
 
-  const sessions = sleepSessions(events).filter(s =>
-    overlapMin(s, dayStart.valueOf(), dayEnd.valueOf(), now) > 0
-  )
+  const sessions = sleepSessions(events).filter(s => overlapMin(s, dayStart.valueOf(), dayEnd.valueOf(), now) > 0)
 
   // Динамические границы дневного окна
   const dayFrom = morningWake(events, dayStart, now)
   const dayTo = eveningBedtimeStart(events, dayStart, dayEnd)
 
   // Дневной сон (nap) — сессия, начавшаяся в окне [пробуждение, отбой) этого дня
-  const naps = sessions.filter(s =>
-    s.startedAt >= dayFrom && s.startedAt < dayTo && s.startedAt < dayEnd.valueOf()
-  )
+  const naps = sessions.filter(s => s.startedAt >= dayFrom && s.startedAt < dayTo && s.startedAt < dayEnd.valueOf())
 
   const daySleepMin = naps.reduce((sum, s) => sum + durationMin(s, now), 0)
-  const totalSleepMin = sessions.reduce(
-    (sum, s) => sum + overlapMin(s, dayStart.valueOf(), dayEnd.valueOf(), now), 0
-  )
+  const totalSleepMin = sessions.reduce((sum, s) => sum + overlapMin(s, dayStart.valueOf(), dayEnd.valueOf(), now), 0)
   const nightSleepMin = Math.max(0, totalSleepMin - daySleepMin)
 
   // Среднее время бодрствования за день: дневное окно минус дневной сон,
   // делённое на число промежутков бодрствования (napCount + 1).
   const dayToEff = Math.min(dayTo, now, dayEnd.valueOf())
   const awakeMin = Math.max(0, (dayToEff - dayFrom) / 60000 - daySleepMin)
-  const wakeWindowMin = totalSleepMin > 0 && awakeMin > 0
-    ? Math.round(awakeMin / (naps.length + 1)) : 0
+  const wakeWindowMin = totalSleepMin > 0 && awakeMin > 0 ? Math.round(awakeMin / (naps.length + 1)) : 0
 
   return {
     sessions,
@@ -136,7 +128,9 @@ export function currentState(events, now = Date.now()) {
 // Последний завершённый дневной сон сегодня
 export function lastNapToday(events, now = Date.now()) {
   const today = dayjs(now).startOf('day')
-  return sleepSessions(events)
-    .filter(s => s.endedAt != null && isDaytimeStart(s) && dayjs(s.startedAt).isSame(today, 'day'))
-    .pop() || null
+  return (
+    sleepSessions(events)
+      .filter(s => s.endedAt != null && isDaytimeStart(s) && dayjs(s.startedAt).isSame(today, 'day'))
+      .pop() || null
+  )
 }

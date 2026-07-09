@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useSettlingStore } from '../settling'
 
 const time = vi.hoisted(() => ({ now: new Date('2025-06-10T10:00:00').getTime() }))
 vi.mock('../../time/now', () => ({
@@ -10,8 +11,6 @@ vi.mock('../persist', () => ({
   loadJSON: vi.fn(async (_key: string, fallback: unknown) => fallback),
   saveJSON: vi.fn()
 }))
-
-import { useSettlingStore } from '../settling'
 
 function reset() {
   time.now = new Date('2025-06-10T10:00:00').getTime()

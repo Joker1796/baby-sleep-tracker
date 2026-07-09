@@ -47,7 +47,6 @@ export function metNorms(summary, norms) {
   return { dayOk, totalOk, all: dayOk && totalOk }
 }
 
-
 // Главная функция для главного экрана: фаза + персональные подсказки.
 // settling — сессия укладывания или null; extension — сессия продления сна или null.
 export function buildGuidance({ child, events, now = Date.now(), settling = null, extension = null }) {
@@ -74,8 +73,14 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   // даже если он начался до 19:00 — тогда пробуждение из него ночное.
   const from16h = now - 16 * 3600000
   const eveningBath = events
-    .filter(e => e.type === 'bath' && e.startedAt >= from16h && e.startedAt <= now &&
-      dayjs(e.startedAt).hour() >= 18 && dayjs(e.startedAt).hour() < 22)
+    .filter(
+      e =>
+        e.type === 'bath' &&
+        e.startedAt >= from16h &&
+        e.startedAt <= now &&
+        dayjs(e.startedAt).hour() >= 18 &&
+        dayjs(e.startedAt).hour() < 22
+    )
     .sort((x, y) => y.startedAt - x.startedAt)[0]
   if (eveningBath) {
     const bathEnd = eveningBath.endedAt ?? eveningBath.startedAt
@@ -83,18 +88,19 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
       .filter(e => e.type === 'sleep' && e.startedAt >= bathEnd && e.startedAt <= now)
       .sort((x, y) => x.startedAt - y.startedAt)[0]
     if (afterBath) {
-      bedtimeStart = bedtimeStart == null
-        ? afterBath.startedAt
-        : Math.min(bedtimeStart, afterBath.startedAt)
+      bedtimeStart = bedtimeStart == null ? afterBath.startedAt : Math.min(bedtimeStart, afterBath.startedAt)
     }
   }
-  const morningAfterBedtime = bedtimeStart != null
-    ? dayjs(bedtimeStart).add(dayjs(bedtimeStart).hour() >= DAY_START_H ? 1 : 0, 'day')
-        .startOf('day').add(DAY_START_H, 'hour').valueOf()
-    : null
-  const isNightWaking = !state.sleeping && bedtimeStart != null &&
-    state.lastWakeAt != null && state.lastWakeAt >= bedtimeStart &&
-    now < morningAfterBedtime
+  const morningAfterBedtime =
+    bedtimeStart != null
+      ? dayjs(bedtimeStart)
+          .add(dayjs(bedtimeStart).hour() >= DAY_START_H ? 1 : 0, 'day')
+          .startOf('day')
+          .add(DAY_START_H, 'hour')
+          .valueOf()
+      : null
+  const isNightWaking =
+    !state.sleeping && bedtimeStart != null && state.lastWakeAt != null && state.lastWakeAt >= bedtimeStart && now < morningAfterBedtime
 
   // Последний завершённый дневной сон и его длительность
   const lastNap = lastNapToday(events, now)
@@ -103,11 +109,10 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   const justWokeRecently = state.awakeMin != null && state.awakeMin <= 20
 
   // Короткий дневной сон (<35 мин) → предложить продлить сон
-  const shortDayNap = !state.sleeping && !isNightWaking && !isNightNow &&
-    lastNapMin != null && lastNapMin < 35 && justWokeRecently
+  const shortDayNap = !state.sleeping && !isNightWaking && !isNightNow && lastNapMin != null && lastNapMin < 35 && justWokeRecently
   // Короткий ночной сон после купания (<30 мин) → тоже предложить продлить
-  const shortNightAfterBath = !state.sleeping && isNightWaking && hasBathToday &&
-    lastSleepMin != null && lastSleepMin < 30 && justWokeRecently
+  const shortNightAfterBath =
+    !state.sleeping && isNightWaking && hasBathToday && lastSleepMin != null && lastSleepMin < 30 && justWokeRecently
   const justWokeShort = shortDayNap || shortNightAfterBath
 
   // ── Фаза ──
@@ -154,9 +159,7 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   const isFirstWake = today.napCount === 0
   function wakeChecklist() {
     if (!isFirstWake) return []
-    return [
-      { id: 'vitaminD', type: 'vitaminD', label: 'Дать витамин D', scope: 'day' }
-    ]
+    return [{ id: 'vitaminD', type: 'vitaminD', label: 'Дать витамин D', scope: 'day' }]
   }
 
   if (phase === 'no-data') {
@@ -187,7 +190,9 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
     }
   } else if (phase === 'wind-down') {
     g.headline = 'Скоро сон'
-    g.lines.push(`Примерно в ${dayjs(nextNapAt || bedtimeAt).format('HH:mm')} пора укладываться. Начинайте сбавлять темп: приглушите свет, спокойные тихие игры, без экранов и шумной активности.`)
+    g.lines.push(
+      `Примерно в ${dayjs(nextNapAt || bedtimeAt).format('HH:mm')} пора укладываться. Начинайте сбавлять темп: приглушите свет, спокойные тихие игры, без экранов и шумной активности.`
+    )
     g.wakeChecklist = wakeChecklist()
     if (nextIsNight && !hasBathToday) {
       g.suggestBath = true
@@ -197,7 +202,9 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   } else if (phase === 'time-to-sleep') {
     g.headline = 'Пора укладывать'
     if (wakeWindowLeft <= 0) {
-      g.lines.push('Малыш бодрствует дольше нормы для своего возраста. Уложите сейчас, пока не перегулял — с переутомлением уснуть намного труднее.')
+      g.lines.push(
+        'Малыш бодрствует дольше нормы для своего возраста. Уложите сейчас, пока не перегулял — с переутомлением уснуть намного труднее.'
+      )
     } else {
       g.lines.push('Окно бодрствования почти закончилось — самое время начинать укладывание, не дожидаясь слёз от усталости.')
     }
@@ -215,7 +222,9 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
     } else {
       g.steps = settlingAdviceByLocation(child, g.location)
       if (g.settlingMin >= 30) {
-        g.lines.push(`Укладывание идёт уже ${formatDurationMin(g.settlingMin)}. Если не выходит — вероятно, малыш перегулял или, наоборот, ещё не устал. Сделайте паузу 15–20 минут при тусклом свете и попробуйте заново. Вы справляетесь, это правда бывает непросто.`)
+        g.lines.push(
+          `Укладывание идёт уже ${formatDurationMin(g.settlingMin)}. Если не выходит — вероятно, малыш перегулял или, наоборот, ещё не устал. Сделайте паузу 15–20 минут при тусклом свете и попробуйте заново. Вы справляетесь, это правда бывает непросто.`
+        )
       }
     }
   } else if (phase === 'sleeping') {
@@ -224,7 +233,9 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
     if (night) {
       g.lines.push('Пусть спит. При пробуждениях — минимум света, тихий голос, никакой стимуляции: так малыш легче свяжет циклы сна.')
     } else {
-      g.lines.push(`Малыш спит уже ${formatDurationMin(state.sleepingMin)}. Не будите раньше времени, но следите, чтобы поздний дневной сон не сдвинул ночной.`)
+      g.lines.push(
+        `Малыш спит уже ${formatDurationMin(state.sleepingMin)}. Не будите раньше времени, но следите, чтобы поздний дневной сон не сдвинул ночной.`
+      )
     }
   }
 
@@ -291,9 +302,14 @@ function buildGreeting(yesterday, norms, ageM) {
   if (yesterday.daySleepMin >= norms.daySleep[0]) achievements.push('Дневного сна вчера хватило по возрасту.')
 
   const attention = []
-  if (shortNaps >= 1) attention.push(`Вчера ${shortNaps === 1 ? 'был короткий сон' : 'были короткие сны'} — сегодня следите за окнами бодрствования и укладывайте при первых признаках усталости.`)
-  if (peregul) attention.push('Вчера случались перегулы (малыш подолгу не спал) — сегодня не пропускайте окно сна, чтобы не копить усталость.')
-  if (yesterday.daySleepMin < norms.daySleep[0] * 0.8) attention.push('Дневного сна вчера было маловато — при недосыпе уводите на ночь пораньше.')
+  if (shortNaps >= 1)
+    attention.push(
+      `Вчера ${shortNaps === 1 ? 'был короткий сон' : 'были короткие сны'} — сегодня следите за окнами бодрствования и укладывайте при первых признаках усталости.`
+    )
+  if (peregul)
+    attention.push('Вчера случались перегулы (малыш подолгу не спал) — сегодня не пропускайте окно сна, чтобы не копить усталость.')
+  if (yesterday.daySleepMin < norms.daySleep[0] * 0.8)
+    attention.push('Дневного сна вчера было маловато — при недосыпе уводите на ночь пораньше.')
   if (yesterday.napCount > norms.naps[1]) attention.push('Дневных снов было больше обычного — последите, чтобы это не укоротило ночь.')
   if (attention.length === 0) attention.push('Ориентируйтесь на окна бодрствования и признаки усталости — это главный ориентир дня.')
 

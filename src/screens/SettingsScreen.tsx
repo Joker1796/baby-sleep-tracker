@@ -115,7 +115,11 @@ export default function SettingsScreen() {
             })}
             <Pressable
               onPress={() => setTab('new')}
-              style={[styles.tab, { borderColor: colors.border, backgroundColor: colors.surface2 }, showNew && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              style={[
+                styles.tab,
+                { borderColor: colors.border, backgroundColor: colors.surface2 },
+                showNew && { backgroundColor: colors.primary, borderColor: colors.primary }
+              ]}
             >
               <Text style={{ fontWeight: '600', fontSize: 16, color: showNew ? '#fff' : colors.textSoft }}>＋</Text>
             </Pressable>
@@ -173,9 +177,7 @@ export default function SettingsScreen() {
         <Card>
           <Text style={s.cardTitle}>Напоминания</Text>
           <View style={s.row}>
-            <Text style={[s.muted, s.small, s.grow]}>
-              Уведомление, когда окно бодрствования подходит к концу и пора укладывать.
-            </Text>
+            <Text style={[s.muted, s.small, s.grow]}>Уведомление, когда окно бодрствования подходит к концу и пора укладывать.</Text>
             <Pressable
               onPress={toggleNapReminder}
               style={[s.chip, napReminder && s.chipActive]}
@@ -206,8 +208,8 @@ export default function SettingsScreen() {
         <Card>
           <Text style={s.cardTitle}>Данные</Text>
           <Text style={[s.muted, s.small]}>
-            Все данные хранятся только на этом устройстве. Делайте резервные копии, чтобы не потерять историю и
-            переносить её между устройствами.
+            Все данные хранятся только на этом устройстве. Делайте резервные копии, чтобы не потерять историю и переносить её между
+            устройствами.
           </Text>
           <View style={[s.row, { marginTop: 10 }]}>
             <Btn title="⬇️ Экспорт" variant="secondary" onPress={exportBackup} style={s.grow} />
@@ -219,8 +221,8 @@ export default function SettingsScreen() {
         <Card>
           <Text style={s.cardTitle}>О приложении</Text>
           <Text style={[s.muted, s.small]}>
-            «Режим малыша» — трекер сна и режима ребёнка с подсказками на основе возрастных норм. Подсказки носят
-            информационный характер и не заменяют консультацию педиатра.
+            «Режим малыша» — трекер сна и режима ребёнка с подсказками на основе возрастных норм. Подсказки носят информационный характер и
+            не заменяют консультацию педиатра.
           </Text>
           <Text style={[s.muted, s.small, { marginTop: 8 }]}>Работает офлайн · данные на устройстве</Text>
         </Card>

@@ -6,7 +6,7 @@ export const DEFAULT_REGIME_MODE = 'auto'
 
 // Середина диапазона 'HH:MM'..'HH:MM'
 function midTime(from, to) {
-  const toMin = (s) => {
+  const toMin = s => {
     const [h, m] = s.split(':').map(Number)
     return h * 60 + m
   }
@@ -50,7 +50,9 @@ export function regimeToNorms(regime) {
   const daySleep = n * dur
   const bedtime = regime.nightStart || '20:00'
   return {
-    fromM: 0, toM: 999, label: 'Свой режим',
+    fromM: 0,
+    toM: 999,
+    label: 'Свой режим',
     wakeWindow: [w, w],
     naps: [n, n],
     daySleep: [daySleep, daySleep],

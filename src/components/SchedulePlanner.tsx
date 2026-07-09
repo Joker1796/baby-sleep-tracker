@@ -45,10 +45,7 @@ export default function SchedulePlanner({ days }: { days: number }) {
 
   // Профиль и расписание считаем только в развёрнутом состоянии.
   // scheduleProfile — JS-модуль: параметр child в нём нетипизирован.
-  const profile = useMemo(
-    () => (show && child ? scheduleProfile(events, now, days, child as any) : null),
-    [show, child, events, now, days]
-  )
+  const profile = useMemo(() => (show && child ? scheduleProfile(events, now, days, child as any) : null), [show, child, events, now, days])
   const schedule = useMemo(
     () => (profile ? buildSchedule(profile, { wakeMin, bedMin, anchors }) : null),
     [profile, wakeMin, bedMin, anchors]
@@ -108,23 +105,43 @@ export default function SchedulePlanner({ days }: { days: number }) {
       <View style={styles.bounds}>
         <View style={s.grow}>
           <Text style={s.label}>Начало дня</Text>
-          <DateTimeInput value={minutesToDate(wakeMin ?? 0)} mode="time" onChange={d => setWakeMin(dayjs(d).hour() * 60 + dayjs(d).minute())} />
+          <DateTimeInput
+            value={minutesToDate(wakeMin ?? 0)}
+            mode="time"
+            onChange={d => setWakeMin(dayjs(d).hour() * 60 + dayjs(d).minute())}
+          />
         </View>
         <View style={s.grow}>
           <Text style={s.label}>Конец дня</Text>
-          <DateTimeInput value={minutesToDate(bedMin ?? 0)} mode="time" onChange={d => setBedMin(dayjs(d).hour() * 60 + dayjs(d).minute())} />
+          <DateTimeInput
+            value={minutesToDate(bedMin ?? 0)}
+            mode="time"
+            onChange={d => setBedMin(dayjs(d).hour() * 60 + dayjs(d).minute())}
+          />
         </View>
       </View>
 
       <View style={styles.tlWrap}>
         <View style={[styles.tlBar, { backgroundColor: colors.surface2 }]}>
           {schedule.segments.map((seg: any, i: number) => (
-            <View key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${(seg.from / 1440) * 100}%`, width: `${((seg.to - seg.from) / 1440) * 100}%`, backgroundColor: seg.type === 'night' ? colors.nightBar : colors.dayBar }} />
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: `${(seg.from / 1440) * 100}%`,
+                width: `${((seg.to - seg.from) / 1440) * 100}%`,
+                backgroundColor: seg.type === 'night' ? colors.nightBar : colors.dayBar
+              }}
+            />
           ))}
         </View>
         <View style={styles.tlTicks}>
           {TIME_TICKS.map(t => (
-            <Text key={t} style={[styles.tick, { color: colors.textSoft, left: `${(t / 24) * 100}%` }]}>{t}</Text>
+            <Text key={t} style={[styles.tick, { color: colors.textSoft, left: `${(t / 24) * 100}%` }]}>
+              {t}
+            </Text>
           ))}
         </View>
       </View>
@@ -132,17 +149,35 @@ export default function SchedulePlanner({ days }: { days: number }) {
       <View>
         {schedRows.map((r: any, i: number) => {
           if (r.kind === 'wake') return <SchedRow key={i} icon="☀️" label="Подъём" time={r.hhmm} />
-          if (r.kind === 'gap') return <Text key={i} style={[s.muted, s.small, styles.gap]}>бодрствование ~{formatDurationMin(r.min)}</Text>
-          if (r.kind === 'nap') return <SchedRow key={i} icon="😴" label={`Сон ${r.idx} · ${formatDurationMin(r.nap.durMin)}`} time={`${r.nap.startHHMM}–${r.nap.endHHMM}`} />
-          if (r.kind === 'event') return <SchedRow key={i} icon={r.ev.icon} label={`${r.ev.label} · бодрствование`} time={r.ev.hhmm} event />
+          if (r.kind === 'gap')
+            return (
+              <Text key={i} style={[s.muted, s.small, styles.gap]}>
+                бодрствование ~{formatDurationMin(r.min)}
+              </Text>
+            )
+          if (r.kind === 'nap')
+            return (
+              <SchedRow
+                key={i}
+                icon="😴"
+                label={`Сон ${r.idx} · ${formatDurationMin(r.nap.durMin)}`}
+                time={`${r.nap.startHHMM}–${r.nap.endHHMM}`}
+              />
+            )
+          if (r.kind === 'event')
+            return <SchedRow key={i} icon={r.ev.icon} label={`${r.ev.label} · бодрствование`} time={r.ev.hhmm} event />
           return <SchedRow key={i} icon="🌙" label="Ночной сон" time={r.hhmm} night />
         })}
       </View>
 
       {schedule.adjusted && (
-        <Text style={[s.muted, s.small, { marginTop: 10 }]}>🎯 Распорядок подстроен под события из календаря — к их времени малыш бодрствует.</Text>
+        <Text style={[s.muted, s.small, { marginTop: 10 }]}>
+          🎯 Распорядок подстроен под события из календаря — к их времени малыш бодрствует.
+        </Text>
       )}
-      <Text style={[s.muted, s.small, { marginTop: 10 }]}>Окна бодрствования короче с утра и длиннее к вечеру. Ориентир по средним, а не жёсткое правило.</Text>
+      <Text style={[s.muted, s.small, { marginTop: 10 }]}>
+        Окна бодрствования короче с утра и длиннее к вечеру. Ориентир по средним, а не жёсткое правило.
+      </Text>
     </Card>
   )
 }
@@ -165,7 +200,15 @@ const styles = StyleSheet.create({
   tlBar: { position: 'relative', height: 22, borderRadius: 6, overflow: 'hidden' },
   tlTicks: { position: 'relative', height: 14, marginTop: 2 },
   tick: { position: 'absolute', fontSize: 9, transform: [{ translateX: -4 }] },
-  schedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, marginBottom: 2 },
+  schedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 2
+  },
   schedLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   schedTime: { fontSize: 14, fontWeight: '700' },
   gap: { paddingVertical: 3, paddingLeft: 40 }

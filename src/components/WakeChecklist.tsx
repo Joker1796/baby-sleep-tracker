@@ -10,13 +10,7 @@ import { hapticTap } from '../utils/haptics'
 import { useTheme } from '../theme/ThemeProvider'
 import { radiusSm } from '../theme/colors'
 
-export default function WakeChecklist({
-  items,
-  wakeSince
-}: {
-  items: ChecklistItem[]
-  wakeSince: number | null
-}) {
+export default function WakeChecklist({ items, wakeSince }: { items: ChecklistItem[]; wakeSince: number | null }) {
   const { colors } = useTheme()
   const now = useNow()
   const events = useSorted()

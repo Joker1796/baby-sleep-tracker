@@ -41,13 +41,19 @@ function Root() {
   const [boot, setBoot] = useState<BootState>({ status: 'loading' })
 
   const start = useCallback(() => {
-    setBoot({ status: 'loading' })
     bootstrap()
       .then(() => setBoot({ status: 'ready' }))
       .catch((error: Error) => setBoot({ status: 'error', error }))
   }, [])
 
-  useEffect(start, [start])
+  useEffect(() => {
+    start()
+  }, [start])
+
+  function retry() {
+    setBoot({ status: 'loading' })
+    start()
+  }
 
   return (
     <>
@@ -55,7 +61,7 @@ function Root() {
       {boot.status === 'ready' ? (
         <RootNavigator />
       ) : boot.status === 'error' ? (
-        <BootError error={boot.error} onRetry={start} />
+        <BootError error={boot.error} onRetry={retry} />
       ) : (
         <Splash />
       )}

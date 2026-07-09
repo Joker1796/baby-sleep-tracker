@@ -18,25 +18,14 @@ export default function ChildSwitcher() {
   if (children.length <= 1) return null
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      style={styles.wrap}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.wrap}>
       {children.map(child => {
         const active = activeId === child.id
         return (
-          <Pressable
-            key={child.id}
-            onPress={() => setActive(child.id)}
-            style={[s.chip, active && s.chipActive]}
-          >
+          <Pressable key={child.id} onPress={() => setActive(child.id)} style={[s.chip, active && s.chipActive]}>
             <View style={[styles.dot, { backgroundColor: child.color }]} />
             <Text style={[s.chipText, active && s.chipActiveText]}>{child.name}</Text>
-            <Text style={[styles.age, { color: active ? colors.primary : colors.textSoft }]}>
-              {formatAge(child.birthDate, now)}
-            </Text>
+            <Text style={[styles.age, { color: active ? colors.primary : colors.textSoft }]}>{formatAge(child.birthDate, now)}</Text>
           </Pressable>
         )
       })}

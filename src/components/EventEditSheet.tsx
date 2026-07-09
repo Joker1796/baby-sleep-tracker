@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, Pressable, Modal, KeyboardAvoidingView, Platform, ScrollView, TextInput, Alert, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -13,9 +13,7 @@ import ToothChart from './ToothChart'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
-export type EventModel =
-  | (Partial<SleepEvent> & { isNew?: boolean })
-  | null
+export type EventModel = (Partial<SleepEvent> & { isNew?: boolean }) | null
 
 export default function EventEditSheet({
   model,
@@ -46,18 +44,24 @@ export default function EventEditSheet({
   const [error, setError] = useState('')
   const isNew = !!model?.isNew
 
-  useEffect(() => {
-    if (!model) return
-    setError('')
-    setType(model.type || 'sleep')
-    setStartedAt(new Date(model.startedAt ?? simNow()))
-    setEndedAt(model.endedAt != null ? new Date(model.endedAt) : null)
-    setHasEnd(model.endedAt != null)
-    setNote(model.note || '')
-    setAmount(model.amount != null ? String(model.amount) : '')
-    setPlanned(!!model.planned)
-    setTeeth(Array.isArray(model.teeth) ? [...model.teeth] : [])
-  }, [model])
+  // Модалка не размонтируется между открытиями, поэтому при смене model
+  // сбрасываем поля формы. Обновление прямо в рендере — паттерн
+  // «adjusting state when a prop changes» из документации React.
+  const [prevModel, setPrevModel] = useState<EventModel>(null)
+  if (model !== prevModel) {
+    setPrevModel(model)
+    if (model) {
+      setError('')
+      setType(model.type || 'sleep')
+      setStartedAt(new Date(model.startedAt ?? simNow()))
+      setEndedAt(model.endedAt != null ? new Date(model.endedAt) : null)
+      setHasEnd(model.endedAt != null)
+      setNote(model.note || '')
+      setAmount(model.amount != null ? String(model.amount) : '')
+      setPlanned(!!model.planned)
+      setTeeth(Array.isArray(model.teeth) ? [...model.teeth] : [])
+    }
+  }
 
   const currentDef = (EVENT_TYPES as any)[type] || EVENT_TYPES.sleep
   const isInterval = currentDef.kind === 'interval'
@@ -71,7 +75,8 @@ export default function EventEditSheet({
     }
     const base = typesForAge(types || EVENT_TYPE_LIST, childAgeM)
     return [...base].sort((a: any, b: any) => {
-      const la = last[a.id], lb = last[b.id]
+      const la = last[a.id],
+        lb = last[b.id]
       if (la != null && lb != null) return lb - la
       if (la != null) return -1
       if (lb != null) return 1
@@ -147,11 +152,7 @@ export default function EventEditSheet({
                     {typeOptions.map((t: any) => {
                       const active = type === t.id
                       return (
-                        <Pressable
-                          key={t.id}
-                          onPress={() => setType(t.id)}
-                          style={[s.chip, active && s.chipActive]}
-                        >
+                        <Pressable key={t.id} onPress={() => setType(t.id)} style={[s.chip, active && s.chipActive]}>
                           <Text style={[s.chipText, active && s.chipActiveText]}>
                             {t.icon} {t.label}
                           </Text>
@@ -170,7 +171,12 @@ export default function EventEditSheet({
               {isInterval && (
                 <>
                   <Pressable style={[styles.field, styles.checkRow]} onPress={toggleEnd}>
-                    <View style={[styles.checkbox, { borderColor: hasEnd ? colors.primary : colors.border, backgroundColor: hasEnd ? colors.primary : 'transparent' }]}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        { borderColor: hasEnd ? colors.primary : colors.border, backgroundColor: hasEnd ? colors.primary : 'transparent' }
+                      ]}
+                    >
                       {hasEnd && <Ionicons name="checkmark" size={16} color="#fff" />}
                     </View>
                     <Text style={{ color: colors.text, fontSize: 15 }}>Уже закончилось</Text>

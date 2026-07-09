@@ -54,11 +54,7 @@ export async function listChildren() {
 }
 
 export async function putChild(child) {
-  await requireDb().runAsync(
-    'INSERT OR REPLACE INTO children (id, data) VALUES (?, ?)',
-    child.id,
-    JSON.stringify(child)
-  )
+  await requireDb().runAsync('INSERT OR REPLACE INTO children (id, data) VALUES (?, ?)', child.id, JSON.stringify(child))
 }
 
 export async function deleteChild(id) {
@@ -68,10 +64,7 @@ export async function deleteChild(id) {
 // --- events ---
 
 export async function listEvents(childId) {
-  const rows = await requireDb().getAllAsync(
-    'SELECT data FROM events WHERE childId = ? ORDER BY startedAt',
-    childId
-  )
+  const rows = await requireDb().getAllAsync('SELECT data FROM events WHERE childId = ? ORDER BY startedAt', childId)
   return rows.map(r => JSON.parse(r.data))
 }
 

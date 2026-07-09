@@ -58,9 +58,7 @@ export const useSettlingStore = create<SettlingState>((set, get) => ({
       loadJSON<Dict>(ADVICE_KEY, {}),
       ...DISMISS_KINDS.map(kind => loadJSON<Dict>(DISMISS_KEYS[kind], {}))
     ])
-    const dismissed = Object.fromEntries(
-      DISMISS_KINDS.map((kind, i) => [kind, dismissedByKind[i]])
-    ) as Record<DismissKind, Dict>
+    const dismissed = Object.fromEntries(DISMISS_KINDS.map((kind, i) => [kind, dismissedByKind[i]])) as Record<DismissKind, Dict>
     set({ sessions, extensions, adviceDismissed, dismissed })
   },
 

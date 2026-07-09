@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useChildrenStore, selectActiveChild } from '../children'
 
 const db = vi.hoisted(() => {
   let children: Record<string, any> = {}
@@ -31,8 +32,6 @@ vi.mock('../persist', () => ({
   loadString: vi.fn(async () => null),
   saveString: vi.fn()
 }))
-
-import { useChildrenStore, selectActiveChild } from '../children'
 
 function reset() {
   db.reset()

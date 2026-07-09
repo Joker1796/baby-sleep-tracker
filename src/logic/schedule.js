@@ -72,16 +72,16 @@ export function scheduleProfile(events, now = Date.now(), days = 7, child = null
     hasData: false,
     daysCounted: 0,
     wakeMin: 7 * 60,
-    bedMin: Math.round(((bh * 60 + bm) + (bh2 * 60 + bm2)) / 2),
+    bedMin: Math.round((bh * 60 + bm + (bh2 * 60 + bm2)) / 2),
     napCount,
     napDurationMin: Math.max(20, Math.round(daySleep / napCount)),
     wwRange: norms.wakeWindow
   }
 }
 
-const MIN_WW = 20        // минимальное окно бодрствования, мин
-const ANCHOR_PRE = 30    // за сколько до события малыш уже бодрствует
-const ANCHOR_POST = 45   // сколько после начала события длится бодрствование
+const MIN_WW = 20 // минимальное окно бодрствования, мин
+const ANCHOR_PRE = 30 // за сколько до события малыш уже бодрствует
+const ANCHOR_POST = 45 // сколько после начала события длится бодрствование
 
 // Раскладывает распорядок «на завтра». wakeMin/bedMin из override (выбор
 // пользователя) имеют приоритет над профилем; число снов и длительность — из профиля.
@@ -99,9 +99,7 @@ export function buildSchedule(profile, override = {}) {
 
   // Окна бодрствования растут к вечеру: утром короче, перед ночным сном длиннее.
   // Соотношение «последнее / первое» берём из возрастных норм, иначе ~1.4.
-  const rawSpread = profile.wwRange && profile.wwRange[0] > 0
-    ? profile.wwRange[1] / profile.wwRange[0]
-    : 1.4
+  const rawSpread = profile.wwRange && profile.wwRange[0] > 0 ? profile.wwRange[1] / profile.wwRange[0] : 1.4
   const spread = Math.min(1.8, Math.max(1.15, rawSpread))
 
   const nWindows = napCount + 1
@@ -186,9 +184,9 @@ function avoidAnchors(naps, anchors, { wakeMin, bedMin, napDurationMin }) {
         const prevEnd = i > 0 ? res[i - 1].endMin : wakeMin
         const earlierStart = lo - napDurationMin
         if (earlierStart - prevEnd >= MIN_WW) {
-          n.startMin = earlierStart          // успеваем поспать до события
+          n.startMin = earlierStart // успеваем поспать до события
         } else {
-          n.startMin = hi                    // иначе сон уходит на время после события
+          n.startMin = hi // иначе сон уходит на время после события
         }
         n.endMin = n.startMin + napDurationMin
       }

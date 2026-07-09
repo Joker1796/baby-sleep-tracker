@@ -59,11 +59,7 @@ export default function DateTimeInput({
 
   return (
     <View>
-      <Pressable
-        style={[s.input, show && { borderColor: colors.primary }]}
-        onPress={togglePicker}
-        accessibilityRole="button"
-      >
+      <Pressable style={[s.input, show && { borderColor: colors.primary }]} onPress={togglePicker} accessibilityRole="button">
         <Text style={{ color: colors.text, fontSize: 15 }}>{dayjs(value).format(fmt)}</Text>
       </Pressable>
       {show && (

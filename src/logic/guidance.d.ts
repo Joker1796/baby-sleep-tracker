@@ -65,14 +65,7 @@ export interface AdvisorResult {
 }
 
 export type GuidancePhase =
-  | 'no-data'
-  | 'active'
-  | 'wind-down'
-  | 'time-to-sleep'
-  | 'night-waking'
-  | 'settling'
-  | 'nap-extension'
-  | 'sleeping'
+  'no-data' | 'active' | 'wind-down' | 'time-to-sleep' | 'night-waking' | 'settling' | 'nap-extension' | 'sleeping'
 
 export interface ActivityIdea {
   title: string

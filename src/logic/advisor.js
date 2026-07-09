@@ -31,9 +31,7 @@ export function buildAdvice({ child, events, now = Date.now() }) {
     wakeWindowMin = Math.max(Math.round(norms.wakeWindow[0] * 0.75), norms.wakeWindow[0] - 20)
   }
 
-  const nextNapAt = !state.sleeping && state.lastWakeAt != null
-    ? state.lastWakeAt + wakeWindowMin * 60000
-    : null
+  const nextNapAt = !state.sleeping && state.lastWakeAt != null ? state.lastWakeAt + wakeWindowMin * 60000 : null
   const wakeWindowLeft = nextNapAt != null ? (nextNapAt - now) / 60000 : null
   const wakeProgress = state.awakeMin != null ? state.awakeMin / wakeWindowMin : null
 
@@ -46,8 +44,7 @@ export function buildAdvice({ child, events, now = Date.now() }) {
     bedtimeAt = Math.max(bedFrom - 35 * 60000, timeOn(now, '18:00'))
   }
 
-  const nextIsNight = nextNapAt != null &&
-    (nextNapAt >= bedtimeAt - 45 * 60000 || today.napCount >= norms.naps[1])
+  const nextIsNight = nextNapAt != null && (nextNapAt >= bedtimeAt - 45 * 60000 || today.napCount >= norms.naps[1])
 
   const dayStart = dayjs(now).startOf('day').valueOf()
   const todayEvents = events.filter(e => e.startedAt >= dayStart)
@@ -85,7 +82,14 @@ export function buildAdvice({ child, events, now = Date.now() }) {
   for (const rule of ADVISOR_RULES) {
     try {
       if (rule.when(ctx)) {
-        advices.push({ id: rule.id, priority: rule.priority, text: rule.text(ctx), tipId: rule.tipId || null, general: rule.general || false, profile: rule.profile || false })
+        advices.push({
+          id: rule.id,
+          priority: rule.priority,
+          text: rule.text(ctx),
+          tipId: rule.tipId || null,
+          general: rule.general || false,
+          profile: rule.profile || false
+        })
       }
     } catch {
       // правило с ошибкой не должно ломать приложение

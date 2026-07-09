@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text } from 'react-native'
 import Svg, { Rect, Text as SvgText } from 'react-native-svg'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -17,13 +17,7 @@ const TW = 24
 const GAP = (VW - N * TW) / (N + 1)
 const xOf = (i: number) => GAP + i * (TW + GAP)
 
-export default function ToothChart({
-  value,
-  onChange
-}: {
-  value: string[]
-  onChange: (next: string[]) => void
-}) {
+export default function ToothChart({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
   const { colors } = useTheme()
   const s = useCommonStyles()
   const selected = new Set(value)
@@ -67,5 +61,3 @@ export default function ToothChart({
     </View>
   )
 }
-
-const styles = StyleSheet.create({})
