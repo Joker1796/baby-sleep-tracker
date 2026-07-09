@@ -83,7 +83,8 @@ export default function SettingsScreen() {
       const res = await importBackup({ replace })
       if (!res) return
       await reloadStores()
-      setMessage(`Импортировано: детей — ${res.children}, событий — ${res.events}`)
+      const skippedNote = res.skipped > 0 ? `, пропущено битых записей — ${res.skipped}` : ''
+      setMessage(`Импортировано: детей — ${res.children}, событий — ${res.events}${skippedNote}`)
     } catch (err: any) {
       setMessage(`Ошибка импорта: ${err.message}`)
     }

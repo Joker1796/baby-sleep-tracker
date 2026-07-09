@@ -67,8 +67,12 @@ export function requestReminderSync(): void {
   }, 500)
 }
 
-// Вызывается один раз из bootstrap, после загрузки сторов.
+// Вызывается из bootstrap после загрузки сторов. Идемпотентно: bootstrap
+// может перезапускаться после ошибки, подписки не должны дублироваться.
+let initialized = false
 export function initNapReminders(): void {
+  if (initialized) return
+  initialized = true
   // В форграунде баннер не показываем — состояние и так на экране.
   Notifications.setNotificationHandler({
     handleNotification: async () => ({

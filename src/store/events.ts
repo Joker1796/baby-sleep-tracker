@@ -28,12 +28,18 @@ interface EventsState {
   addPoint: (type: string, at?: number, note?: string) => Promise<SleepEvent>
 }
 
+// Токен последнего запроса load: при быстром переключении детей ответ
+// более раннего запроса мог бы перезаписать более поздний.
+let loadToken = 0
+
 export const useEventsStore = create<EventsState>((set, get) => ({
   events: [],
   loadedFor: null,
 
   async load(childId) {
+    const token = ++loadToken
     const events = await listEvents(childId)
+    if (token !== loadToken) return
     set({ events, loadedFor: childId })
   },
 
