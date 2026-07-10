@@ -91,7 +91,7 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
       feeding: feeding || 'breast',
       aids: aids || [],
       gender: gender || null,
-      mainButtons: mainButtons || (DEFAULT_MAIN_BUTTONS as MainButton[]),
+      mainButtons: mainButtons || DEFAULT_MAIN_BUTTONS,
       hideHints: hideHints || false,
       regime: { mode: 'auto' }
     }
@@ -118,7 +118,7 @@ export const useChildrenStore = create<ChildrenState>((set, get) => ({
       regime =
         child.regime && child.regime.wakeWindow != null
           ? { ...child.regime, mode: 'custom' }
-          : (seedRegimeFromNorms(ageInMonths(child.birthDate)) as ChildRegime)
+          : seedRegimeFromNorms(ageInMonths(child.birthDate))
     } else {
       regime = { ...(child.regime || {}), mode: 'auto' }
     }

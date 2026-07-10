@@ -57,9 +57,9 @@ export default function StatsSection() {
 
   const usedEventTypes = useMemo(() => {
     const presentTypes = new Set(events.filter(e => !e.planned && e.type !== 'sleep').map(e => e.type))
-    return NON_SLEEP_TYPE_LIST.filter((t: any) => presentTypes.has(t.id) && !STATS_EXCLUDE.has(t.id))
+    return NON_SLEEP_TYPE_LIST.filter(t => presentTypes.has(t.id) && !STATS_EXCLUDE.has(t.id))
   }, [events])
-  const metricDef: any = metric === 'sleep' ? null : (EVENT_TYPES as any)[metric]
+  const metricDef = metric === 'sleep' ? null : EVENT_TYPES[metric]
 
   // Текущий день не включаем — статистика по завершённым дням (вчера и назад).
   // Считаем только когда секция развёрнута: analyzeDay × 30 дней — дорогая операция.
@@ -98,7 +98,7 @@ export default function StatsSection() {
 
   const { eventBars, eventAvg } = useMemo(() => {
     if (metric === 'sleep' || !stats.length) return { eventBars: [] as any[], eventAvg: null as number | null }
-    const def: any = (EVENT_TYPES as any)[metric]
+    const def = EVENT_TYPES[metric]
     const valueForDay = (ts: number) => {
       if (def?.amountUnit && def.amountAgg === 'sum') {
         return events
@@ -171,7 +171,7 @@ export default function StatsSection() {
               <Pressable onPress={() => setMetric('sleep')} style={[s.chip, metric === 'sleep' && s.chipActive]}>
                 <Text style={[s.chipText, metric === 'sleep' && s.chipActiveText]}>😴 Сон</Text>
               </Pressable>
-              {usedEventTypes.map((t: any) => (
+              {usedEventTypes.map(t => (
                 <Pressable key={t.id} onPress={() => setMetric(t.id)} style={[s.chip, metric === t.id && s.chipActive]}>
                   <Text style={[s.chipText, metric === t.id && s.chipActiveText]}>
                     {t.icon} {t.btnLabel || t.label}

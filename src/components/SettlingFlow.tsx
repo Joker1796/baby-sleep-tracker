@@ -107,7 +107,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
       {guidance.activities.length > 0 && (
         <View style={styles.ideas}>
           <View style={styles.ideaTags}>
-            {guidance.activities.map((idea: any, i: number) => {
+            {guidance.activities.map((idea, i) => {
               const active = openActivity === i
               return (
                 <Pressable
@@ -191,7 +191,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
         <>
           {!guidance.location ? (
             <View style={styles.locOptions}>
-              {guidance.locationOptions.map((loc: any) => (
+              {guidance.locationOptions.map(loc => (
                 <Pressable
                   key={loc.id}
                   onPress={() => chooseLocation(loc.id)}

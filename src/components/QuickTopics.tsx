@@ -9,7 +9,7 @@ export default function QuickTopics() {
   const { colors } = useTheme()
   const navigation = useNavigation<any>()
   const [openId, setOpenId] = useState<string | null>(null)
-  const open = QUICK_TOPICS.find((t: any) => t.id === openId)
+  const open = QUICK_TOPICS.find(t => t.id === openId)
 
   return (
     <View style={styles.wrap}>
@@ -20,7 +20,7 @@ export default function QuickTopics() {
         >
           <Text style={[styles.tagText, { color: colors.onPrimary }]}>💡 Советы</Text>
         </Pressable>
-        {QUICK_TOPICS.map((t: any) => {
+        {QUICK_TOPICS.map(t => {
           const active = openId === t.id
           return (
             <Pressable

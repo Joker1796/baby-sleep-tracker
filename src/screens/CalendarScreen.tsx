@@ -149,7 +149,7 @@ export default function CalendarScreen() {
 
           {showPalette && (
             <View style={styles.palette}>
-              {CALENDAR_TYPE_LIST.map((t: any) => (
+              {CALENDAR_TYPE_LIST.map(t => (
                 <Pressable
                   key={t.id}
                   onPress={() => addType(t.id)}

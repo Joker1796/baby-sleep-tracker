@@ -33,10 +33,10 @@ export default function AdviceScreen() {
 
   const ageMonths = child ? ageInMonths(child.birthDate, now) : null
   const visibleTips = showAllAges || ageMonths == null ? TIPS : tipsForAge(ageMonths)
-  const categories = TIP_CATEGORIES.map((cat: any) => ({
+  const categories = TIP_CATEGORIES.map(cat => ({
     ...cat,
-    tips: visibleTips.filter((t: any) => t.category === cat.id)
-  })).filter((cat: any) => cat.tips.length > 0)
+    tips: visibleTips.filter(t => t.category === cat.id)
+  })).filter(cat => cat.tips.length > 0)
 
   return (
     <View style={s.screen}>
@@ -48,12 +48,12 @@ export default function AdviceScreen() {
           </Pressable>
         </View>
 
-        {categories.map((cat: any) => (
+        {categories.map(cat => (
           <View key={cat.id}>
             <Text style={[styles.catTitle, { color: colors.textSoft }]}>
               {cat.icon} {cat.label}
             </Text>
-            {cat.tips.map((tip: any) => {
+            {cat.tips.map(tip => {
               const expanded = expandedId === tip.id
               return (
                 <Card key={tip.id} style={styles.tipCard}>

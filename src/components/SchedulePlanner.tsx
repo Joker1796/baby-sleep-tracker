@@ -122,7 +122,7 @@ export default function SchedulePlanner({ days }: { days: number }) {
 
       <View style={styles.tlWrap}>
         <View style={[styles.tlBar, { backgroundColor: colors.surface2 }]}>
-          {schedule.segments.map((seg: any, i: number) => (
+          {schedule.segments.map((seg, i) => (
             <View
               key={i}
               style={{

@@ -3,6 +3,7 @@
 // поэтому резолвим их в поля палитры темы (theme/colors.ts) по имени.
 import { ThemeColors } from './colors'
 import { EVENT_TYPES } from '../data/eventTypes'
+import type { EventTypeDef } from '../logic/types'
 
 // 'var(--c-medicine-soft)' → 'medicineSoft'
 function varToKey(v?: string): string | null {
@@ -14,7 +15,8 @@ function varToKey(v?: string): string | null {
 
 // Возвращает основной и мягкий цвет типа события из текущей палитры темы.
 export function eventColors(colors: ThemeColors, typeId: string): { color: string; soft: string } {
-  const def: any = (EVENT_TYPES as any)[typeId]
+  // Для неизвестных типов из старых бэкапов записи в реестре может не быть
+  const def: EventTypeDef | undefined = EVENT_TYPES[typeId]
   const ck = varToKey(def?.color)
   const sk = varToKey(def?.softColor)
   return {

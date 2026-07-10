@@ -54,7 +54,7 @@ export default function ChildForm({
   )
 
   const rowIds = (row: any): string[] => row.combined || [row.id]
-  const defaultMode = (type: string): MainButton['mode'] => ((EVENT_TYPES as any)[type].kind === 'interval' ? 'time' : 'count')
+  const defaultMode = (type: string): MainButton['mode'] => (EVENT_TYPES[type].kind === 'interval' ? 'time' : 'count')
   const isEnabled = (row: any) => rowIds(row).some(id => mainButtons.some(b => b.type === id))
   const modeOf = (row: any) => {
     for (const id of rowIds(row)) {
@@ -166,7 +166,7 @@ export default function ChildForm({
 
       <Field label="Что используете для сна" s={s}>
         <View style={styles.chips}>
-          {SLEEP_AIDS.map((a: any) => {
+          {SLEEP_AIDS.map(a => {
             const active = aids.includes(a.id)
             return (
               <Pressable key={a.id} onPress={() => toggleAid(a.id)} style={[s.chip, active && s.chipActive]}>

@@ -39,7 +39,7 @@ export default function HistoryScreen() {
 
   // Строки по типам событий, реально отмеченным в этот день (кроме сна).
   const otherStats = useMemo(() => {
-    return NON_SLEEP_TYPE_LIST.map((t: any) => {
+    return NON_SLEEP_TYPE_LIST.map(t => {
       const evs = events.filter(e => e.type === t.id && !e.planned && dayjs(e.startedAt).isSame(dayjs(dayTs), 'day'))
       if (!evs.length) return null
       const label = t.id === 'poop' ? poopWord : t.btnLabel || t.label
