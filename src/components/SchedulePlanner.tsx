@@ -44,8 +44,7 @@ export default function SchedulePlanner({ days }: { days: number }) {
   }, [events, schedDate])
 
   // Профиль и расписание считаем только в развёрнутом состоянии.
-  // scheduleProfile — JS-модуль: параметр child в нём нетипизирован.
-  const profile = useMemo(() => (show && child ? scheduleProfile(events, now, days, child as any) : null), [show, child, events, now, days])
+  const profile = useMemo(() => (show && child ? scheduleProfile(events, now, days, child) : null), [show, child, events, now, days])
   const schedule = useMemo(
     () => (profile ? buildSchedule(profile, { wakeMin, bedMin, anchors }) : null),
     [profile, wakeMin, bedMin, anchors]
@@ -55,8 +54,8 @@ export default function SchedulePlanner({ days }: { days: number }) {
     if (!schedule) return []
     const rows: any[] = [{ kind: 'wake', hhmm: schedule.wake.hhmm }]
     const stops = [
-      ...schedule.naps.map((n: any) => ({ at: n.startMin, kind: 'nap', nap: n })),
-      ...schedule.anchors.map((a: any) => ({ at: a.min, kind: 'event', ev: a }))
+      ...schedule.naps.map(n => ({ at: n.startMin, kind: 'nap' as const, nap: n })),
+      ...schedule.anchors.map(a => ({ at: a.min, kind: 'event' as const, ev: a }))
     ].sort((x, z) => x.at - z.at)
     let prevEnd = schedule.wake.min
     let napIdx = 0
@@ -75,7 +74,7 @@ export default function SchedulePlanner({ days }: { days: number }) {
   }, [schedule])
 
   function open() {
-    const prof = child ? scheduleProfile(events, now, days, child as any) : null
+    const prof = child ? scheduleProfile(events, now, days, child) : null
     if (prof) {
       if (wakeMin == null) setWakeMin(prof.wakeMin)
       if (bedMin == null) setBedMin(prof.bedMin)

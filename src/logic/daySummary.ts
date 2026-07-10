@@ -2,13 +2,28 @@ import { formatDurationMin, plural } from './age'
 import { getNorms } from '../data/sleepNorms'
 import { metNorms } from './guidance'
 import { poopVerb } from './gender'
+import type { DaySleepSummary } from './types'
 
-function cap(str) {
+function cap(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 // Короткое текстовое резюме дня (2–3 предложения) по цифрам сна и событий.
-export function summarizeDay({ summary, tummyMin = 0, poopCount = 0, ageM = 6, isToday = false, gender = null }) {
+export function summarizeDay({
+  summary,
+  tummyMin = 0,
+  poopCount = 0,
+  ageM = 6,
+  isToday = false,
+  gender = null
+}: {
+  summary: Pick<DaySleepSummary, 'napCount' | 'daySleepMin' | 'nightSleepMin' | 'totalSleepMin'>
+  tummyMin?: number
+  poopCount?: number
+  ageM?: number
+  isToday?: boolean
+  gender?: string | null
+}): string {
   const s = summary
   if (s.totalSleepMin === 0 && tummyMin === 0 && poopCount === 0) {
     return isToday ? 'За сегодня пока нет отметок — отмечайте сон и события, и здесь появится сводка дня.' : 'За этот день отметок нет.'

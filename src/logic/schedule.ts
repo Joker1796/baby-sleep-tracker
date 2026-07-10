@@ -2,27 +2,51 @@ import dayjs from 'dayjs'
 import { analyzeDay, morningWake, eveningBedtimeStart } from './sleepAnalyzer'
 import { getNorms } from '../data/sleepNorms'
 import { ageInMonths } from './age'
+import type { Child, SleepEvent } from './types'
+
+// Профиль «среднего дня»: подъём/отбой/сны, усреднённые по истории или из норм.
+export interface ScheduleProfile {
+  hasData: boolean
+  daysCounted: number
+  wakeMin: number
+  bedMin: number
+  napCount: number
+  napDurationMin: number
+  wwRange: [number, number] | null
+}
+
+// Запланированное событие, к которому подстраивается расписание.
+export interface ScheduleAnchor {
+  min: number
+  label?: string
+  icon?: string
+}
+
+interface NapSlot {
+  startMin: number
+  endMin: number
+}
 
 // 'HH:MM' ↔ минуты от полуночи
-export function minToHHMM(min) {
+export function minToHHMM(min: number): string {
   const m = ((Math.round(min) % 1440) + 1440) % 1440
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export function hhmmToMin(hhmm) {
+export function hhmmToMin(hhmm: string | null | undefined): number | null {
   if (!hhmm || typeof hhmm !== 'string' || !hhmm.includes(':')) return null
   const [h, m] = hhmm.split(':').map(Number)
   if (Number.isNaN(h) || Number.isNaN(m)) return null
   return h * 60 + m
 }
 
-function avg(arr) {
+function avg(arr: number[]): number {
   return arr.reduce((s, v) => s + v, 0) / arr.length
 }
 
 // Профиль «среднего дня» по последним `days` дням с данными о сне.
 // Если данных нет — профиль из возрастных норм ребёнка.
-export function scheduleProfile(events, now = Date.now(), days = 7, child = null) {
+export function scheduleProfile(events: SleepEvent[], now: number = Date.now(), days = 7, child: Child | null = null): ScheduleProfile {
   // Возрастные нормы нужны для разброса окон бодрствования (утро короче, вечер длиннее)
   const childNorms = child ? getNorms(ageInMonths(child.birthDate, now)) : null
   const wakeMins = []
@@ -87,7 +111,10 @@ const ANCHOR_POST = 45 // сколько после начала события 
 // пользователя) имеют приоритет над профилем; число снов и длительность — из профиля.
 // override.anchors — запланированные события [{ min, label, icon }]: расписание
 // перестраивается так, чтобы к их времени малыш бодрствовал.
-export function buildSchedule(profile, override = {}) {
+export function buildSchedule(
+  profile: ScheduleProfile,
+  override: { wakeMin?: number | null; bedMin?: number | null; anchors?: ScheduleAnchor[] | null } = {}
+) {
   const wakeMin = override.wakeMin != null ? override.wakeMin : profile.wakeMin
   let bedMin = override.bedMin != null ? override.bedMin : profile.bedMin
   const { napCount, napDurationMin } = profile
@@ -111,7 +138,7 @@ export function buildSchedule(profile, override = {}) {
   const windows = weights.map(w => Math.max(MIN_WW, Math.round((awake * w) / wSum)))
 
   // Раскладываем сны по возрастающим окнам
-  let naps = []
+  let naps: NapSlot[] = []
   let t = wakeMin
   for (let i = 0; i < napCount; i++) {
     const startMin = t + windows[i]
@@ -171,8 +198,12 @@ export function buildSchedule(profile, override = {}) {
 // Сдвигает сны так, чтобы вокруг каждого события [min-PRE; min+POST] малыш
 // бодрствовал: сначала пробуем закончить сон раньше, иначе — начать позже.
 // Затем каскадом убираем наложения и отбрасываем сны, вылезшие за отбой.
-function avoidAnchors(naps, anchors, { wakeMin, bedMin, napDurationMin }) {
-  let res = naps.map(n => ({ ...n }))
+function avoidAnchors(
+  naps: NapSlot[],
+  anchors: ScheduleAnchor[],
+  { wakeMin, bedMin, napDurationMin }: { wakeMin: number; bedMin: number; napDurationMin: number }
+): NapSlot[] {
+  const res = naps.map(n => ({ ...n }))
   // Пара проходов — на случай, если сдвиг одного сна затронул соседний
   for (let pass = 0; pass < 3; pass++) {
     for (const a of anchors) {
