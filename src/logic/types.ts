@@ -8,6 +8,28 @@ import type { Child } from '../store/children'
 export type { SleepEvent } from '../store/events'
 export type { Child, ChildRegime, MainButton } from '../store/children'
 
+// Запись реестра типов событий (data/eventTypes). Реестр индексируется
+// произвольными строковыми id (бэкапы могут содержать неизвестные типы),
+// поэтому EVENT_TYPES — Record<string, EventTypeDef>, а не узкий объект.
+export interface EventTypeDef {
+  id: string
+  label: string
+  kind: 'interval' | 'point'
+  icon: string
+  color?: string
+  softColor?: string
+  btnLabel?: string
+  activeLabel?: string
+  startLabel?: string
+  endLabel?: string
+  canTime?: boolean
+  hasNote?: boolean
+  notePlaceholder?: string
+  amountUnit?: string
+  amountAgg?: 'sum' | 'last'
+  minAgeM?: number
+}
+
 // Элемент SLEEP_NORMS / результат regimeToNorms.
 export interface SleepNorms {
   fromM: number

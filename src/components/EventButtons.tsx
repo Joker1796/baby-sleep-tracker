@@ -25,7 +25,7 @@ export default function EventButtons({ onLogged, onEdit }: { onLogged: (msg: str
 
   // Кнопки главного: только выбранные и доступные по возрасту; кормление первым.
   const list: MainButton[] = getMainButtons(child).filter(
-    (b: MainButton) => mainIds.has(b.type) && (ageM == null || typeDef(b.type).minAgeM == null || ageM >= typeDef(b.type).minAgeM)
+    (b: MainButton) => mainIds.has(b.type) && (ageM == null || typeDef(b.type).minAgeM == null || ageM >= typeDef(b.type).minAgeM!)
   )
   const feeds = FEEDING_TYPE_IDS.map((id: string) => list.find(b => b.type === id)).filter(Boolean) as MainButton[]
   const rest = list.filter(b => !feedingSet.has(b.type))

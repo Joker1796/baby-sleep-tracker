@@ -3,7 +3,9 @@
 // здоровье) и задаёт порядок в пикере кнопок и в строках «Истории».
 // btnLabel — компактная подпись для кнопки; activeLabel — подпись идущего интервала.
 // amountUnit/amountAgg — числовое значение события (мл, °C) и способ агрегации в статистике.
-export const EVENT_TYPES = {
+import type { Child, EventTypeDef, MainButton } from '../logic/types'
+
+export const EVENT_TYPES: Record<string, EventTypeDef> = {
   sleep: {
     id: 'sleep',
     label: 'Сон',
@@ -303,29 +305,29 @@ export const NON_SLEEP_TYPE_LIST = EVENT_TYPE_LIST.filter(t => t.id !== 'sleep')
 export const NON_CALENDAR_TYPE_LIST = EVENT_TYPE_LIST.filter(t => !CALENDAR_TYPE_IDS.includes(t.id))
 
 // Набор кнопок по умолчанию
-export const DEFAULT_MAIN_BUTTONS = [
+export const DEFAULT_MAIN_BUTTONS: MainButton[] = [
   { type: 'tummy', mode: 'time' },
   { type: 'bath', mode: 'time' },
   { type: 'poop', mode: 'count' }
 ]
 
-export function getMainButtons(child) {
+export function getMainButtons(child: Child | null | undefined): MainButton[] {
   return Array.isArray(child?.mainButtons) ? child.mainButtons : DEFAULT_MAIN_BUTTONS
 }
 
 // Описание типа по id с безопасным fallback для неизвестных типов
 // (например, из импортированной резервной копии другой версии).
-export function typeDef(id) {
+export function typeDef(id: string): EventTypeDef {
   return EVENT_TYPES[id] || { id, label: id, icon: '❓', kind: 'point' }
 }
 
 // «Эффективный вид» события: сохранённый на записи kind, иначе — из реестра типов
-export function eventKind(e) {
-  return e?.kind ?? EVENT_TYPES[e?.type]?.kind ?? 'point'
+export function eventKind(e: { type?: string; kind?: string } | null | undefined): string {
+  return e?.kind ?? EVENT_TYPES[e?.type ?? '']?.kind ?? 'point'
 }
 
 // Отфильтровать типы по возрасту ребёнка (мес): скрыть те, у кого minAgeM больше.
-export function typesForAge(list, ageM) {
+export function typesForAge(list: EventTypeDef[], ageM: number | null | undefined): EventTypeDef[] {
   if (ageM == null) return list
   return list.filter(t => t.minAgeM == null || ageM >= t.minAgeM)
 }

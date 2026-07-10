@@ -2,17 +2,19 @@
 // Персонализируются по профилю ребёнка (aids, feeding).
 
 // Где укладывают малыша — от места зависят советы.
-export const SETTLING_LOCATIONS = [
+import type { Child, SettlingLocation } from '../logic/types'
+
+export const SETTLING_LOCATIONS: SettlingLocation[] = [
   { id: 'home', label: 'Дома', icon: '🏠' },
   { id: 'walk', label: 'На прогулке', icon: '🚶' },
   { id: 'guests', label: 'В гостях / кафе', icon: '🧳' }
 ]
 
 // Советы по укладыванию под конкретное место. Персонализируются по профилю.
-export function settlingAdviceByLocation(child, location) {
+export function settlingAdviceByLocation(child: Child, location: string | null | undefined): string[] {
   const aids = child.aids || []
   const breast = child.feeding === 'breast' || child.feeding === 'mixed'
-  const has = id => aids.includes(id)
+  const has = (id: string) => aids.includes(id)
 
   if (location === 'walk') {
     const a = [

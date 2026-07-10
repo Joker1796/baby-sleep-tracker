@@ -63,7 +63,7 @@ export default function EventEditSheet({
     }
   }
 
-  const currentDef = (EVENT_TYPES as any)[type] || EVENT_TYPES.sleep
+  const currentDef = EVENT_TYPES[type] || EVENT_TYPES.sleep
   const isInterval = currentDef.kind === 'interval'
 
   // Список типов в выпадашке: доступные по возрасту, недавно использованные первыми.

@@ -3,7 +3,10 @@
 const NIGHT_DONT =
   'Ночью нельзя: включать яркий свет, разговаривать, выносить малыша из комнаты и брать в свою кровать (если приучаете к отдельной кроватке).'
 
-export function nightAlgorithm({ hour, hoursSinceBedtime }) {
+export function nightAlgorithm({ hour, hoursSinceBedtime }: { hour: number; hoursSinceBedtime: number | null }): {
+  title: string
+  lines: string[]
+} {
   if (hour >= 5 && hour < 7) {
     return {
       title: 'Раннее утро (5–7)',

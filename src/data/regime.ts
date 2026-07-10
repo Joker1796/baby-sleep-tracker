@@ -1,12 +1,13 @@
 // Настраиваемый режим: родитель задаёт параметры сна вручную, они переопределяют
 // возрастные нормы (SLEEP_NORMS). Хранится на записи ребёнка: child.regime.
 import { getNorms, avgWakeWindow } from './sleepNorms'
+import type { ChildRegime, SleepNorms } from '../logic/types'
 
 export const DEFAULT_REGIME_MODE = 'auto'
 
 // Середина диапазона 'HH:MM'..'HH:MM'
-function midTime(from, to) {
-  const toMin = s => {
+function midTime(from: string, to: string): string {
+  const toMin = (s: string) => {
     const [h, m] = s.split(':').map(Number)
     return h * 60 + m
   }
@@ -16,13 +17,13 @@ function midTime(from, to) {
   return `${h}:${m}`
 }
 
-function avg(range) {
+function avg(range: [number, number]): number {
   return Math.round((range[0] + range[1]) / 2)
 }
 
 // Начальные значения настраиваемого режима из текущих возрастных норм —
 // чтобы при первом включении цифры были осмысленными.
-export function seedRegimeFromNorms(ageM) {
+export function seedRegimeFromNorms(ageM: number): ChildRegime {
   const norms = getNorms(ageM)
   const napCount = Math.max(1, avg(norms.naps))
   const daySleep = avg(norms.daySleep)
@@ -42,7 +43,7 @@ export function seedRegimeFromNorms(ageM) {
 
 // Собирает объект в форме элемента SLEEP_NORMS из пользовательских значений,
 // чтобы движок (advisor) и правила работали без изменений.
-export function regimeToNorms(regime) {
+export function regimeToNorms(regime: ChildRegime): SleepNorms {
   const w = Math.max(15, Number(regime.wakeWindow) || 90)
   const n = Math.max(1, Number(regime.napCount) || 1)
   const dur = Math.max(10, Number(regime.napDurationMin) || 60)

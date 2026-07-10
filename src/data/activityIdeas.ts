@@ -1,6 +1,8 @@
 // Идеи, чем занять малыша в активное бодрствование, по возрасту (месяцы).
 // title — короткая подпись-кнопка, text — подробное пояснение «как и зачем».
-export const ACTIVITY_IDEAS = [
+import type { ActivityIdea } from '../logic/types'
+
+export const ACTIVITY_IDEAS: { fromM: number; toM: number; ideas: ActivityIdea[] }[] = [
   {
     fromM: 0,
     toM: 2,
@@ -93,7 +95,7 @@ export const ACTIVITY_IDEAS = [
   }
 ]
 
-export function activitiesForAge(months) {
+export function activitiesForAge(months: number): ActivityIdea[] {
   const found = ACTIVITY_IDEAS.find(a => months >= a.fromM && months < a.toM)
   return (found || ACTIVITY_IDEAS[ACTIVITY_IDEAS.length - 1]).ideas
 }

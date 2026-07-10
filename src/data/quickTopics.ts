@@ -1,5 +1,5 @@
 // Быстрые темы-хэштеги на главном экране: по нажатию раскрывается текст.
-export const QUICK_TOPICS = [
+export const QUICK_TOPICS: { id: string; tag: string; text: string }[] = [
   {
     id: 'feeding',
     tag: '#кормление',

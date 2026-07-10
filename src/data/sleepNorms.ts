@@ -1,7 +1,9 @@
 // Нормы сна по возрастам (0–12 мес). Время — в минутах, если не указано иное.
 // Диапазоны усреднены по общепринятым рекомендациям консультантов по сну
 // (окна бодрствования, суммарный сон — ориентиры, а не жёсткие правила).
-export const SLEEP_NORMS = [
+import type { SleepNorms } from '../logic/types'
+
+export const SLEEP_NORMS: SleepNorms[] = [
   {
     fromM: 0,
     toM: 1,
@@ -100,11 +102,11 @@ export const SLEEP_NORMS = [
   }
 ]
 
-export function getNorms(ageMonths) {
+export function getNorms(ageMonths: number): SleepNorms {
   const m = Math.max(0, ageMonths)
   return SLEEP_NORMS.find(n => m >= n.fromM && m < n.toM) || SLEEP_NORMS[SLEEP_NORMS.length - 1]
 }
 
-export function avgWakeWindow(norms) {
+export function avgWakeWindow(norms: SleepNorms): number {
   return Math.round((norms.wakeWindow[0] + norms.wakeWindow[1]) / 2)
 }

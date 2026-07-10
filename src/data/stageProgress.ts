@@ -1,6 +1,6 @@
 // Ободряющий разбор «было → стало» по этапам. Показывается в утренней сводке,
 // когда возраст малыша соответствует этапу.
-export const STAGE_PROGRESS = [
+export const STAGE_PROGRESS: { fromM: number; toM: number; text: string }[] = [
   {
     fromM: 2,
     toM: 3,
@@ -8,7 +8,7 @@ export const STAGE_PROGRESS = [
   }
 ]
 
-export function stageProgressFor(ageMonths) {
+export function stageProgressFor(ageMonths: number): string | null {
   const s = STAGE_PROGRESS.find(x => ageMonths >= x.fromM && ageMonths < x.toM)
   return s ? s.text : null
 }

@@ -1,7 +1,22 @@
 // База знаний: статьи-советы. Фильтруются по возрасту активного ребёнка (в месяцах).
 // body — обычный текст: абзацы через пустую строку, пункты списка начинаются с «— ».
 
-export const TIP_CATEGORIES = [
+export interface TipCategory {
+  id: string
+  label: string
+  icon: string
+}
+
+export interface Tip {
+  id: string
+  title: string
+  category: string
+  ageFromM: number
+  ageToM: number
+  body: string
+}
+
+export const TIP_CATEGORIES: TipCategory[] = [
   { id: 'settling', label: 'Укладывание и ритуалы', icon: '🌙' },
   { id: 'schedule', label: 'Режим и его коррекция', icon: '🕐' },
   { id: 'regress', label: 'Регрессы и скачки', icon: '🌀' },
@@ -10,7 +25,7 @@ export const TIP_CATEGORIES = [
   { id: 'safety', label: 'Безопасность сна', icon: '🛡️' }
 ]
 
-export const TIPS = [
+export const TIPS: Tip[] = [
   {
     id: 'ritual',
     title: 'Ритуал укладывания',
@@ -382,10 +397,10 @@ export const TIPS = [
   }
 ]
 
-export function tipsForAge(ageMonths) {
+export function tipsForAge(ageMonths: number): Tip[] {
   return TIPS.filter(t => ageMonths >= t.ageFromM - 0.5 && ageMonths <= t.ageToM)
 }
 
-export function getTip(id) {
+export function getTip(id: string | null | undefined): Tip | null {
   return TIPS.find(t => t.id === id) || null
 }
