@@ -1,4 +1,5 @@
 import { isDaytimeStart } from '../logic/sleepAnalyzer'
+import type { AdvisorRule } from '../logic/types'
 
 // Правила подсказок. Каждое правило: when(ctx) → boolean, text(ctx) → строка.
 // priority: 3 — срочно (красное), 2 — важно (жёлтое), 1 — информация.
@@ -9,7 +10,8 @@ import { isDaytimeStart } from '../logic/sleepAnalyzer'
 // wakeWindowMin, nextNapAt, wakeWindowLeft, bedtimeAt, nextIsNight,
 // daySleepDeficit, hasToday(type), t(ts)→'HH:mm', dur(min)→'1 ч 20 мин'.
 
-export const ADVISOR_RULES = [
+// В text допустимы точечные `!`: не-null уже гарантирован соответствующим when.
+export const ADVISOR_RULES: AdvisorRule[] = [
   {
     id: 'log-morning',
     priority: 2,
@@ -23,14 +25,14 @@ export const ADVISOR_RULES = [
     when: c => c.awakeMin != null && c.wakeWindowLeft != null && c.wakeWindowLeft > 0 && c.wakeWindowLeft <= 15 && !c.nextIsNight,
     tipId: 'ritual',
     text: c =>
-      `Окно бодрствования почти закончилось — укладывание примерно в ${c.t(c.nextNapAt)}. Начинайте подготовку: приглушите свет, уберите активные игры, проведите короткий привычный ритуал.`
+      `Окно бодрствования почти закончилось — укладывание примерно в ${c.t(c.nextNapAt!)}. Начинайте подготовку: приглушите свет, уберите активные игры, проведите короткий привычный ритуал.`
   },
   {
     id: 'window-exceeded',
     priority: 3,
     when: c => c.awakeMin != null && c.wakeWindowLeft != null && c.wakeWindowLeft <= 0 && c.wakeWindowLeft > -30,
     text: c =>
-      `Окно бодрствования превышено на ${Math.round(-c.wakeWindowLeft)} мин — укладывайте сейчас. Следите за признаками усталости: трёт глаза, зевает, отворачивается, капризничает.`
+      `Окно бодрствования превышено на ${Math.round(-c.wakeWindowLeft!)} мин — укладывайте сейчас. Следите за признаками усталости: трёт глаза, зевает, отворачивается, капризничает.`
   },
   {
     id: 'window-exceeded-hard',
@@ -38,7 +40,7 @@ export const ADVISOR_RULES = [
     when: c => c.awakeMin != null && c.wakeWindowLeft != null && c.wakeWindowLeft <= -30,
     tipId: 'overtired',
     text: c =>
-      `Сильный перегул: ${Math.round(-c.wakeWindowLeft)} мин сверх окна бодрствования. Ребёнок может быть перевозбуждён и сопротивляться сну. Сначала успокойте (затемните комнату, возьмите на руки, ${c.usesAid('white-noise') ? 'включите белый шум' : 'пошипите монотонно «шшш»'}), затем укладывайте.`
+      `Сильный перегул: ${Math.round(-c.wakeWindowLeft!)} мин сверх окна бодрствования. Ребёнок может быть перевозбуждён и сопротивляться сну. Сначала успокойте (затемните комнату, возьмите на руки, ${c.usesAid('white-noise') ? 'включите белый шум' : 'пошипите монотонно «шшш»'}), затем укладывайте.`
   },
   {
     id: 'short-nap',
@@ -46,14 +48,14 @@ export const ADVISOR_RULES = [
     when: c => c.shortLastNap && !c.sleeping && !c.nextIsNight && c.nextNapAt != null,
     tipId: 'short-naps',
     text: c =>
-      `Последний сон был коротким (${c.dur(c.lastNapMin)}) — такой сон восстанавливает хуже. Окно бодрствования сокращено: следующее укладывание примерно в ${c.t(c.nextNapAt)}.`
+      `Последний сон был коротким (${c.dur(c.lastNapMin!)}) — такой сон восстанавливает хуже. Окно бодрствования сокращено: следующее укладывание примерно в ${c.t(c.nextNapAt!)}.`
   },
   {
     id: 'long-nap-evening',
     priority: 2,
-    when: c => c.sleeping && isDaytimeStart(c.sleeping) && c.sleepingMin > 150 && c.hour >= 16,
+    when: c => !!c.sleeping && isDaytimeStart(c.sleeping) && c.sleepingMin! > 150 && c.hour >= 16,
     text: c =>
-      `Дневной сон длится уже ${c.dur(c.sleepingMin)}, а вечер близко. Подумайте о том, чтобы мягко разбудить малыша — иначе ночное укладывание сместится на позднее время.`
+      `Дневной сон длится уже ${c.dur(c.sleepingMin!)}, а вечер близко. Подумайте о том, чтобы мягко разбудить малыша — иначе ночное укладывание сместится на позднее время.`
   },
   {
     id: 'next-is-night',

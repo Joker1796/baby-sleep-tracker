@@ -4,14 +4,15 @@ import { getNorms, avgWakeWindow } from '../data/sleepNorms'
 import { regimeToNorms } from '../data/regime'
 import { currentState, analyzeDay, lastNapToday, durationMin, SHORT_NAP_MIN } from './sleepAnalyzer'
 import { ADVISOR_RULES } from '../data/advisorRules'
+import type { Advice, AdvisorCtx, AdvisorResult, Child, SleepEvent } from './types'
 
-function timeOn(now, hhmm) {
+function timeOn(now: number, hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
   return dayjs(now).startOf('day').add(h, 'hour').add(m, 'minute').valueOf()
 }
 
 // Главная функция движка: собирает контекст, считает прогнозы и прогоняет правила
-export function buildAdvice({ child, events, now = Date.now() }) {
+export function buildAdvice({ child, events, now = Date.now() }: { child: Child; events: SleepEvent[]; now?: number }): AdvisorResult {
   const ageM = ageInMonths(child.birthDate, now)
   // Настраиваемый режим переопределяет возрастные нормы значениями родителя
   const custom = child.regime?.mode === 'custom' ? child.regime : null
@@ -52,7 +53,7 @@ export function buildAdvice({ child, events, now = Date.now() }) {
   const feeding = child.feeding || null
   const aids = child.aids || []
 
-  const ctx = {
+  const ctx: AdvisorCtx = {
     feeding,
     aids,
     usesAid: id => aids.includes(id),
@@ -78,7 +79,7 @@ export function buildAdvice({ child, events, now = Date.now() }) {
     dur: formatDurationMin
   }
 
-  const advices = []
+  const advices: Advice[] = []
   for (const rule of ADVISOR_RULES) {
     try {
       if (rule.when(ctx)) {

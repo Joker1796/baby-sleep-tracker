@@ -91,6 +91,45 @@ export interface AdvisorResult {
   advices: Advice[]
 }
 
+// Контекст правил советника: собирается в advisor.buildAdvice и передаётся
+// в when/text каждого правила (см. комментарий в data/advisorRules).
+export interface AdvisorCtx extends SleepState {
+  now: number
+  hour: number
+  child: Child
+  ageM: number
+  norms: SleepNorms
+  today: DaySleepSummary
+  todayEvents: SleepEvent[]
+  feeding: string | null
+  aids: string[]
+  usesAid: (id: string) => boolean
+  lastNap: SleepEvent | null
+  lastNapMin: number | null
+  shortLastNap: boolean
+  wakeWindowMin: number
+  nextNapAt: number | null
+  wakeWindowLeft: number | null
+  bedtimeAt: number
+  nextIsNight: boolean
+  daySleepDeficit: boolean
+  hasToday: (type: string) => boolean
+  t: (ts: number) => string
+  dur: (min: number) => string
+}
+
+// Правило советника. when — условие показа, text — текст подсказки;
+// оба получают AdvisorCtx. tipId — ссылка на статью базы знаний.
+export interface AdvisorRule {
+  id: string
+  priority: number
+  when: (ctx: AdvisorCtx) => boolean
+  text: (ctx: AdvisorCtx) => string
+  tipId?: string
+  general?: boolean
+  profile?: boolean
+}
+
 export type GuidancePhase =
   'no-data' | 'active' | 'wind-down' | 'time-to-sleep' | 'night-waking' | 'settling' | 'nap-extension' | 'sleeping'
 
