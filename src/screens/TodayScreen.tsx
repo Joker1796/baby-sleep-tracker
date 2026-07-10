@@ -87,7 +87,8 @@ export default function TodayScreen() {
   if (st.sleeping) {
     status = {
       icon: '😴',
-      title: `Спит ${formatDurationMin(st.sleepingMin)}`,
+      // sleepingMin не бывает null, пока st.sleeping есть (контракт currentState)
+      title: `Спит ${formatDurationMin(st.sleepingMin!)}`,
       sub: `${sleptWord} в ${dayjs(st.sleeping.startedAt).format('HH:mm')}`
     }
   } else if (isNightWaking && st.lastWakeAt != null) {

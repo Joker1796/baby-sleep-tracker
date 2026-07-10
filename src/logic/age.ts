@@ -1,19 +1,19 @@
 import dayjs from 'dayjs'
 
 // birthDate — строка 'YYYY-MM-DD'
-export function ageInMonths(birthDate, now = Date.now()) {
+export function ageInMonths(birthDate: string, now: number = Date.now()): number {
   return dayjs(now).diff(dayjs(birthDate), 'month')
 }
 
-export function ageInWeeks(birthDate, now = Date.now()) {
+export function ageInWeeks(birthDate: string, now: number = Date.now()): number {
   return dayjs(now).diff(dayjs(birthDate), 'week')
 }
 
-export function ageInDays(birthDate, now = Date.now()) {
+export function ageInDays(birthDate: string, now: number = Date.now()): number {
   return dayjs(now).diff(dayjs(birthDate), 'day')
 }
 
-export function plural(n, one, few, many) {
+export function plural(n: number, one: string, few: string, many: string): string {
   const mod10 = n % 10
   const mod100 = n % 100
   if (mod10 === 1 && mod100 !== 11) return one
@@ -21,7 +21,7 @@ export function plural(n, one, few, many) {
   return many
 }
 
-export function formatAge(birthDate, now = Date.now()) {
+export function formatAge(birthDate: string, now: number = Date.now()): string {
   const days = ageInDays(birthDate, now)
   if (days < 0) return 'ещё не родился'
   if (days < 14) return `${days} ${plural(days, 'день', 'дня', 'дней')}`
@@ -35,7 +35,7 @@ export function formatAge(birthDate, now = Date.now()) {
   return weeksLeft > 0 ? `${base} ${weeksLeft} нед` : base
 }
 
-export function formatDurationMin(min) {
+export function formatDurationMin(min: number): string {
   const m = Math.max(0, Math.round(min))
   const h = Math.floor(m / 60)
   const rest = m % 60
