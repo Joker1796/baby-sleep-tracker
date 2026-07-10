@@ -8,6 +8,10 @@ import { settlingAdviceByLocation, SETTLING_LOCATIONS } from '../data/settlingSt
 import { NAP_EXTENSION_STEPS, NAP_EXTENSION_GIVEUP, NAP_EXTENSION_TIMEOUT_MIN } from '../data/napExtension'
 import { nightAlgorithm } from '../data/nightAlgorithm'
 import { stageProgressFor } from '../data/stageProgress'
+import type { BuildGuidanceArgs, Child, DaySleepSummary, Greeting, Guidance, GuidancePhase, Milestone, SleepEvent, SleepNorms } from './types'
+
+// Реэкспорт доменных типов: исторически UI импортирует их из guidance.
+export type * from './types'
 
 const MS_MIN = 60000
 // После этого времени бодрствование считается ночным (пробуждение на кормление,
@@ -15,7 +19,7 @@ const MS_MIN = 60000
 const NIGHT_START_MIN = 19 * 60 + 45 // 19:45
 
 // Начало текущего ночного сна («отбой») — самый ранний ночной сон за последние ~16 ч.
-export function nightBedtimeStart(events, now = Date.now()) {
+export function nightBedtimeStart(events: SleepEvent[], now: number = Date.now()): number | null {
   const from = now - 16 * 3600000
   const nightStarts = events
     .filter(e => e.type === 'sleep' && e.startedAt >= from && e.startedAt <= now && !isDaytimeStart(e))
@@ -24,7 +28,7 @@ export function nightBedtimeStart(events, now = Date.now()) {
 }
 
 // Если сегодня ровно исполнился новый месяц (или год) — данные для поздравления.
-export function milestoneToday(child, now = Date.now()) {
+export function milestoneToday(child: Child | null | undefined, now: number = Date.now()): Milestone | null {
   if (!child?.birthDate) return null
   const bd = dayjs(child.birthDate)
   const today = dayjs(now)
@@ -41,7 +45,10 @@ export function milestoneToday(child, now = Date.now()) {
 }
 
 // Уложился ли малыш в нормы по итогам дня
-export function metNorms(summary, norms) {
+export function metNorms(
+  summary: Pick<DaySleepSummary, 'daySleepMin' | 'totalSleepMin'>,
+  norms: SleepNorms
+): { dayOk: boolean; totalOk: boolean; all: boolean } {
   const dayOk = summary.daySleepMin >= norms.daySleep[0] - 20
   const totalOk = summary.totalSleepMin >= norms.totalSleep[0] - 30
   return { dayOk, totalOk, all: dayOk && totalOk }
@@ -49,7 +56,7 @@ export function metNorms(summary, norms) {
 
 // Главная функция для главного экрана: фаза + персональные подсказки.
 // settling — сессия укладывания или null; extension — сессия продления сна или null.
-export function buildGuidance({ child, events, now = Date.now(), settling = null, extension = null }) {
+export function buildGuidance({ child, events, now = Date.now(), settling = null, extension = null }: BuildGuidanceArgs): Guidance {
   const a = buildAdvice({ child, events, now })
   const { state, norms, today, nextNapAt, wakeWindowLeft, bedtimeAt, nextIsNight, ageM, windDownMin } = a
   const hour = dayjs(now).hour()
@@ -100,7 +107,7 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
           .valueOf()
       : null
   const isNightWaking =
-    !state.sleeping && bedtimeStart != null && state.lastWakeAt != null && state.lastWakeAt >= bedtimeStart && now < morningAfterBedtime
+    !state.sleeping && bedtimeStart != null && state.lastWakeAt != null && state.lastWakeAt >= bedtimeStart && now < morningAfterBedtime!
 
   // Последний завершённый дневной сон и его длительность
   const lastNap = lastNapToday(events, now)
@@ -116,7 +123,7 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   const justWokeShort = shortDayNap || shortNightAfterBath
 
   // ── Фаза ──
-  let phase
+  let phase: GuidancePhase
   if (state.sleeping) phase = 'sleeping'
   else if (state.lastWakeAt == null) phase = 'no-data'
   else if (extension && extension.startedAt) phase = 'nap-extension'
@@ -126,7 +133,7 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
   else if (wakeWindowLeft != null && wakeWindowLeft <= (windDownMin || 30)) phase = 'wind-down'
   else phase = 'active'
 
-  const g = {
+  const g: Guidance = {
     phase,
     advisor: a,
     nextNapAt,
@@ -201,7 +208,7 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
     g.showStartSettling = true
   } else if (phase === 'time-to-sleep') {
     g.headline = 'Пора укладывать'
-    if (wakeWindowLeft <= 0) {
+    if (wakeWindowLeft! <= 0) {
       g.lines.push(
         'Малыш бодрствует дольше нормы для своего возраста. Уложите сейчас, пока не перегулял — с переутомлением уснуть намного труднее.'
       )
@@ -228,13 +235,13 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
       }
     }
   } else if (phase === 'sleeping') {
-    const night = !isDaytimeStart(state.sleeping)
+    const night = !isDaytimeStart(state.sleeping!)
     g.headline = night ? 'Ночной сон идёт' : 'Дневной сон идёт'
     if (night) {
       g.lines.push('Пусть спит. При пробуждениях — минимум света, тихий голос, никакой стимуляции: так малыш легче свяжет циклы сна.')
     } else {
       g.lines.push(
-        `Малыш спит уже ${formatDurationMin(state.sleepingMin)}. Не будите раньше времени, но следите, чтобы поздний дневной сон не сдвинул ночной.`
+        `Малыш спит уже ${formatDurationMin(state.sleepingMin!)}. Не будите раньше времени, но следите, чтобы поздний дневной сон не сдвинул ночной.`
       )
     }
   }
@@ -263,18 +270,18 @@ export function buildGuidance({ child, events, now = Date.now(), settling = null
 }
 
 // Разбор вчерашнего дня: короткие сны и перегулы
-function reviewDay(summary, norms) {
+function reviewDay(summary: DaySleepSummary, norms: SleepNorms): { shortNaps: number; peregul: boolean } {
   const shortNaps = summary.naps.filter(n => n.endedAt != null && durationMin(n) < SHORT_NAP_MIN).length
   const sorted = [...summary.sessions].filter(s => s.endedAt != null).sort((a, b) => a.startedAt - b.startedAt)
   let maxGap = 0
   for (let i = 1; i < sorted.length; i++) {
-    maxGap = Math.max(maxGap, (sorted[i].startedAt - sorted[i - 1].endedAt) / MS_MIN)
+    maxGap = Math.max(maxGap, (sorted[i].startedAt - sorted[i - 1].endedAt!) / MS_MIN)
   }
   const peregul = maxGap > avgWakeWindow(norms) * 1.5
   return { shortNaps, peregul }
 }
 
-function buildGreeting(yesterday, norms, ageM) {
+function buildGreeting(yesterday: DaySleepSummary, norms: SleepNorms, ageM: number): Greeting {
   const progress = stageProgressFor(ageM)
   // Нет данных за вчера (первый день / тестовый режим) — общее приветствие
   if (yesterday.totalSleepMin === 0) {

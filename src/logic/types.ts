@@ -162,7 +162,9 @@ export interface Greeting {
   line: string
   achievements: string[]
   attention: string[]
-  progress?: string
+  // null, когда для возраста нет этапа (stageProgressFor); .d.ts объявлял
+  // string и расходился с реальностью — тип исправлен при миграции на TS.
+  progress: string | null
 }
 
 export interface Guidance {
