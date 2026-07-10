@@ -2,14 +2,16 @@ import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
 import { analyzeDay, currentState, lastNapToday } from '../sleepAnalyzer'
 
-const ts = s => dayjs(s).valueOf()
+import type { SleepEvent } from '../types'
 
-function sleep(start, end) {
-  return { id: start, type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
+const ts = (s: string) => dayjs(s).valueOf()
+
+function sleep(start: string, end: string | null): SleepEvent {
+  return { id: start, childId: 'c1', note: '', type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
 }
 
-function bath(start, end) {
-  return { id: 'bath' + start, type: 'bath', startedAt: ts(start), endedAt: end ? ts(end) : null }
+function bath(start: string, end: string | null): SleepEvent {
+  return { id: 'bath' + start, childId: 'c1', note: '', type: 'bath', startedAt: ts(start), endedAt: end ? ts(end) : null }
 }
 
 const NOW = ts('2026-07-04T16:00:00')
@@ -109,6 +111,6 @@ describe('lastNapToday', () => {
       sleep('2026-07-04T13:00', '2026-07-04T13:30')
     ]
     const nap = lastNapToday(events, NOW)
-    expect(nap.startedAt).toBe(ts('2026-07-04T13:00'))
+    expect(nap!.startedAt).toBe(ts('2026-07-04T13:00'))
   })
 })

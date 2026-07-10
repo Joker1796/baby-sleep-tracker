@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { dayCount, dayTotalMin } from '../eventStats'
 
 const day = dayjs('2025-06-10T00:00:00')
-const at = (h, m = 0) => day.hour(h).minute(m).valueOf()
+const at = (h: number, m = 0) => day.hour(h).minute(m).valueOf()
 const dayTs = day.valueOf()
 
 describe('dayCount', () => {

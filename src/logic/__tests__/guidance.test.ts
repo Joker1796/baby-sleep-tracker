@@ -3,15 +3,17 @@ import dayjs from 'dayjs'
 import { buildGuidance, metNorms } from '../guidance'
 import { getNorms } from '../../data/sleepNorms'
 
-const ts = s => dayjs(s).valueOf()
-const child = { id: 'c1', name: 'Тест', birthDate: '2026-02-01', feeding: 'breast', aids: [] }
+import type { Child, SleepEvent } from '../types'
 
-function sleep(start, end) {
-  return { id: start, type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
+const ts = (s: string) => dayjs(s).valueOf()
+const child: Child = { id: 'c1', name: 'Тест', birthDate: '2026-02-01', color: '#7c6ff0', feeding: 'breast', aids: [] }
+
+function sleep(start: string, end: string | null): SleepEvent {
+  return { id: start, childId: 'c1', note: '', type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
 }
 
-function bath(start, end) {
-  return { id: 'bath' + start, type: 'bath', startedAt: ts(start), endedAt: end ? ts(end) : null }
+function bath(start: string, end: string | null): SleepEvent {
+  return { id: 'bath' + start, childId: 'c1', note: '', type: 'bath', startedAt: ts(start), endedAt: end ? ts(end) : null }
 }
 
 describe('фазы', () => {
@@ -104,9 +106,9 @@ describe('поздравления с новым месяцем/годом', () 
     // родился 2026-02-01, сегодня 2026-07-01 → ровно 5 месяцев
     const g = buildGuidance({ child, events: [], now: ts('2026-07-01T09:00') })
     expect(g.milestone).not.toBeNull()
-    expect(g.milestone.isYear).toBe(false)
-    expect(g.milestone.months).toBe(5)
-    expect(g.milestone.text).toContain('5 месяцев')
+    expect(g.milestone!.isYear).toBe(false)
+    expect(g.milestone!.months).toBe(5)
+    expect(g.milestone!.text).toContain('5 месяцев')
   })
 
   it('не юбилейный день → нет поздравления', () => {
@@ -117,9 +119,9 @@ describe('поздравления с новым месяцем/годом', () 
   it('годовой юбилей → поздравление с годом', () => {
     const yr = { ...child, birthDate: '2025-07-04' }
     const g = buildGuidance({ child: yr, events: [], now: ts('2026-07-04T09:00') })
-    expect(g.milestone.isYear).toBe(true)
-    expect(g.milestone.years).toBe(1)
-    expect(g.milestone.text).toContain('1 год')
+    expect(g.milestone!.isYear).toBe(true)
+    expect(g.milestone!.years).toBe(1)
+    expect(g.milestone!.text).toContain('1 год')
   })
 })
 
@@ -160,23 +162,24 @@ describe('карточки дня', () => {
     ]
     const g = buildGuidance({ child, events, now: ts('2026-07-04T07:30') })
     expect(g.greeting).not.toBeNull()
-    expect(g.greeting.schedule).toBeUndefined()
-    expect(Array.isArray(g.greeting.attention)).toBe(true)
-    expect(g.greeting.attention.length).toBeGreaterThan(0)
+    // страховка от возврата легаси-поля schedule: в типе Greeting его нет
+    expect((g.greeting as { schedule?: unknown }).schedule).toBeUndefined()
+    expect(Array.isArray(g.greeting!.attention)).toBe(true)
+    expect(g.greeting!.attention.length).toBeGreaterThan(0)
   })
 
   it('приветствие утром показывается и без данных за вчера (общее)', () => {
     const g = buildGuidance({ child, events: [], now: ts('2026-07-05T08:00') })
     expect(g.greeting).not.toBeNull()
-    expect(g.greeting.achievements).toEqual([])
-    expect(g.greeting.attention.length).toBeGreaterThan(0)
+    expect(g.greeting!.achievements).toEqual([])
+    expect(g.greeting!.attention.length).toBeGreaterThan(0)
   })
 
   it('приветствие в 2–3 месяца содержит прогресс «было → стало»', () => {
     const twoMo = { ...child, birthDate: '2026-05-01' } // ~2 мес на 2026-07-05
     const g = buildGuidance({ child: twoMo, events: [], now: ts('2026-07-05T08:00') })
-    expect(g.greeting.progress).toBeTruthy()
-    expect(g.greeting.progress).toContain('хаос')
+    expect(g.greeting!.progress).toBeTruthy()
+    expect(g.greeting!.progress).toContain('хаос')
   })
 
   it('приветствие отмечает короткий сон вчера', () => {
@@ -185,7 +188,7 @@ describe('карточки дня', () => {
       sleep('2026-07-03T20:00', '2026-07-04T07:00')
     ]
     const g = buildGuidance({ child, events, now: ts('2026-07-04T07:30') })
-    expect(g.greeting.attention.join(' ')).toContain('коротк')
+    expect(g.greeting!.attention.join(' ')).toContain('коротк')
   })
 
   it('вечернее бодрствование до отбоя (ещё не уходил в ночь) — не ночное пробуждение', () => {

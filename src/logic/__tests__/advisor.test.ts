@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
 import { buildAdvice } from '../advisor'
 
-const ts = s => dayjs(s).valueOf()
+import type { Child, SleepEvent } from '../types'
+
+const ts = (s: string) => dayjs(s).valueOf()
 
 // 5 месяцев на 4 июля 2026 → нормы 4–6 мес: окно 120–150 мин (среднее 135)
-const child = { id: 'c1', name: 'Тест', birthDate: '2026-02-01' }
+const child: Child = { id: 'c1', name: 'Тест', birthDate: '2026-02-01', color: '#7c6ff0' }
 
-function sleep(start, end) {
-  return { id: start, type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
+function sleep(start: string, end: string | null): SleepEvent {
+  return { id: start, childId: 'c1', note: '', type: 'sleep', startedAt: ts(start), endedAt: end ? ts(end) : null }
 }
 
 describe('buildAdvice: прогноз следующего сна', () => {
@@ -20,7 +22,7 @@ describe('buildAdvice: прогноз следующего сна', () => {
     })
     expect(a.ageM).toBe(5)
     expect(a.nextNapAt).toBe(ts('2026-07-04T14:00') + 135 * 60000)
-    expect(Math.round(a.wakeWindowLeft)).toBe(75)
+    expect(Math.round(a.wakeWindowLeft!)).toBe(75)
   })
 
   it('короткий сон → окно сокращается, укладывание раньше', () => {
@@ -56,7 +58,7 @@ describe('buildAdvice: правила', () => {
     expect(a.wakeWindowLeft).toBeLessThan(0)
     const ids = a.advices.map(x => x.id)
     expect(ids).toContain('window-exceeded')
-    expect(a.advices.find(x => x.id === 'window-exceeded').priority).toBe(3)
+    expect(a.advices.find(x => x.id === 'window-exceeded')!.priority).toBe(3)
   })
 
   it('окно на исходе → подсказка про ритуал', () => {
@@ -97,7 +99,7 @@ describe('buildAdvice: правила', () => {
     const a = buildAdvice({ child: swaddled, events: [], now: ts('2026-07-04T12:00') })
     const rule = a.advices.find(x => x.id === 'swaddle-stop')
     expect(rule).toBeTruthy()
-    expect(rule.profile).toBe(true)
+    expect(rule!.profile).toBe(true)
     // без пеленания правило не срабатывает
     const plain = buildAdvice({ child, events: [], now: ts('2026-07-04T12:00') })
     expect(plain.advices.map(x => x.id)).not.toContain('swaddle-stop')
@@ -109,18 +111,18 @@ describe('buildAdvice: правила', () => {
     const bf = buildAdvice({ child: { ...child, feeding: 'breast', aids: ['feeding-to-sleep'] }, events, now })
     const bfAdvice = bf.advices.find(x => x.id === 'feeding-to-sleep-assoc')
     expect(bfAdvice).toBeTruthy()
-    expect(bfAdvice.text).toContain('на груди')
+    expect(bfAdvice!.text).toContain('на груди')
     const ff = buildAdvice({ child: { ...child, feeding: 'formula', aids: ['feeding-to-sleep'] }, events, now })
-    expect(ff.advices.find(x => x.id === 'feeding-to-sleep-assoc').text).toContain('с бутылочкой')
+    expect(ff.advices.find(x => x.id === 'feeding-to-sleep-assoc')!.text).toContain('с бутылочкой')
   })
 
   it('текст про перегул учитывает белый шум из профиля', () => {
     const events = [sleep('2026-07-04T08:00', '2026-07-04T09:00')]
     const now = ts('2026-07-04T12:00') // 180 мин бодрствования при окне 135 → перегул > 30 мин
     const noAids = buildAdvice({ child, events, now })
-    expect(noAids.advices.find(x => x.id === 'window-exceeded-hard').text).toContain('шшш')
+    expect(noAids.advices.find(x => x.id === 'window-exceeded-hard')!.text).toContain('шшш')
     const withNoise = buildAdvice({ child: { ...child, aids: ['white-noise'] }, events, now })
-    expect(withNoise.advices.find(x => x.id === 'window-exceeded-hard').text).toContain('белый шум')
+    expect(withNoise.advices.find(x => x.id === 'window-exceeded-hard')!.text).toContain('белый шум')
   })
 
   it('правила отсортированы по приоритету', () => {

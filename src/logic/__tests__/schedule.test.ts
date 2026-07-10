@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { buildSchedule } from '../schedule'
+import type { ScheduleProfile } from '../schedule'
 
-const profile = {
+const profile: ScheduleProfile = {
   hasData: true,
   daysCounted: 7,
   wakeMin: 7 * 60,
