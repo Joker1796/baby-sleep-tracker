@@ -3,6 +3,10 @@
 Expo Go не подходит (проект на SDK 57 новее публичного Expo Go), поэтому собираем
 собственный dev-клиент. Для симулятора Apple ID и подпись **не нужны**.
 
+> Ставишь на **реальный iPhone**? См. раздел
+> [«Установка на реальный iPhone»](#установка-на-реальный-iphone-release-бесплатный-apple-id)
+> ниже — там про подпись, UDID и обязательное удаление push-entitlement.
+
 Что уже готово в системе:
 - ✅ CocoaPods 1.17.0 (`brew`)
 - ✅ Command Line Tools
@@ -60,6 +64,60 @@ npx expo start --dev-client
 
 > Проброс порта (как `adb reverse` на Android) на симуляторе **не нужен** —
 > симулятор делит localhost с Mac.
+
+---
+
+## Установка на реальный iPhone (Release, бесплатный Apple ID)
+
+Цель — автономная сборка: JS зашит в приложение, работает **без Mac и без Metro**
+(офлайн-first). Подписываем бесплатным Apple ID («Personal Team»).
+
+**Что нужно заранее:**
+- iPhone подключён кабелем, разблокирован, на нём подтверждено «Доверять» этому Mac.
+- В Xcode один раз добавлен Apple ID и включён Automatically manage signing для
+  target `reginaapp` (Signing & Capabilities → Team = свой «(Personal Team)»).
+
+**Шаги:**
+
+1. **Узнать UDID устройства:**
+   ```bash
+   xcrun devicectl list devices        # колонка Identifier у строки с iPhone
+   ```
+
+2. **Убрать push-entitlement** (обязательно на бесплатном аккаунте). Бесплатный
+   personal team не поддерживает capability Push Notifications, а prebuild кладёт
+   в `ios/reginaapp/reginaapp.entitlements` ключ `aps-environment` → подпись падает
+   с `Personal development teams … do not support the Push Notifications capability`.
+   Приложению нужны только **локальные напоминания**, которым этот entitlement не
+   нужен. Приводим файл к пустому словарю:
+   ```xml
+   <plist version="1.0">
+     <dict>
+     </dict>
+   </plist>
+   ```
+
+3. **Собрать Release и поставить на телефон** (из `BabyApp/`):
+   ```bash
+   npx expo run:ios --device "<UDID>" --configuration Release
+   ```
+   - `--device` без UDID в неинтерактивном режиме падает с «Input is required».
+   - Первый прогон долгий: `pod install` + компиляция. В конце — `Build Succeeded`
+     и `Installing … reginaapp.app ✔ Complete 100%`.
+   - Metro в конце может запуститься по инерции — для Release он не нужен, терминал
+     можно закрыть.
+
+4. **Доверить разработчика на телефоне** (при первом запуске, если появится
+   «Ненадёжный разработчик»): iPhone → **Настройки → Основные → VPN и управление
+   устройством** → профиль своего Apple ID → **Доверять**.
+
+**Ограничения бесплатного Apple ID (помнить):**
+- Сертификат живёт **~7 дней** — потом приложение перестаёт открываться, надо
+  повторить шаг 3. Максимум 3 своих приложения.
+- `ios/` — артефакт `expo prebuild`; после каждой регенерации `aps-environment`
+  возвращается, шаг 2 придётся повторять.
+- Долгоиграющее решение — платный **Apple Developer** ($99/год): снимает и
+  7-дневный лимит, и запрет на push.
 
 ---
 
