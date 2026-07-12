@@ -153,17 +153,6 @@ export default function ChildForm({
         </Text>
       </Field>
 
-      <Field label="Подсказки" s={s}>
-        <View style={s.row}>
-          <Text style={[s.muted, s.small, s.grow]}>
-            Скрывать приветствие, поддержку и карточки-подсказки на «Сегодня». Поздравления остаются.
-          </Text>
-          <Pressable onPress={() => setHideHints(v => !v)} style={[s.chip, hideHints && s.chipActive]}>
-            <Text style={[s.chipText, hideHints && s.chipActiveText]}>{hideHints ? 'Скрыты' : 'Показаны'}</Text>
-          </Pressable>
-        </View>
-      </Field>
-
       <Field label="Что используете для сна" s={s}>
         <View style={styles.chips}>
           {SLEEP_AIDS.map(a => {
@@ -180,6 +169,17 @@ export default function ChildForm({
         <Text style={[s.muted, s.small, { marginTop: 6 }]}>
           Подсказки будут учитывать выбранное — например, напомнят, когда пора уходить от пеленания.
         </Text>
+      </Field>
+
+      <Field label="Подсказки" s={s}>
+        <View style={s.row}>
+          <Text style={[s.muted, s.small, s.grow]}>
+            Скрывать приветствие, поддержку и карточки-подсказки на «Сегодня». Поздравления остаются.
+          </Text>
+          <Pressable onPress={() => setHideHints(v => !v)} style={[s.chip, hideHints && s.chipActive]}>
+            <Text style={[s.chipText, hideHints && s.chipActiveText]}>{hideHints ? 'Скрыты' : 'Показаны'}</Text>
+          </Pressable>
+        </View>
       </Field>
 
       <Field label="Цвет" s={s}>

@@ -123,8 +123,8 @@ export default function HistoryScreen() {
 
         <Card>
           <Text style={[s.cardTitle, { marginBottom: 10 }]}>История событий</Text>
+          <Btn title="+ Добавить событие" variant="secondary" block onPress={addEvent} style={{ marginBottom: 12 }} />
           <TimelineDay dayTs={dayTs} onEdit={e => setSheetModel(e)} />
-          <Btn title="+ Добавить событие" variant="secondary" block onPress={addEvent} style={{ marginTop: 10 }} />
         </Card>
       </ScrollView>
 

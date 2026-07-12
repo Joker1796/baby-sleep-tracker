@@ -153,7 +153,7 @@ export default function SettlingFlow({ guidance, onSlept }: { guidance: Guidance
                 {e.note ? ` · ${e.note}` : ''}
               </Text>
               <Text style={{ fontSize: 13, color: e.startedAt < now ? colors.urgent : colors.textSoft }}>
-                {dayjs(e.startedAt).format('HH:mm')}
+                {dayjs(e.startedAt).format('D MMM, HH:mm')}
               </Text>
             </View>
           ))}

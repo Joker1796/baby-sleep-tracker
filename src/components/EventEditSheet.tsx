@@ -9,6 +9,7 @@ import { EVENT_TYPES, EVENT_TYPE_LIST, typesForAge } from '../data/eventTypes'
 import { ageInMonths } from '../logic/age'
 import { Btn } from './ui'
 import DateTimeInput from './DateTimeInput'
+import SelectInput from './SelectInput'
 import ToothChart from './ToothChart'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
@@ -148,18 +149,12 @@ export default function EventEditSheet({
               {isNew && (
                 <View style={styles.field}>
                   <Text style={s.label}>Тип события</Text>
-                  <View style={styles.chips}>
-                    {typeOptions.map((t: any) => {
-                      const active = type === t.id
-                      return (
-                        <Pressable key={t.id} onPress={() => setType(t.id)} style={[s.chip, active && s.chipActive]}>
-                          <Text style={[s.chipText, active && s.chipActiveText]}>
-                            {t.icon} {t.label}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
-                  </View>
+                  <SelectInput
+                    value={type}
+                    options={typeOptions.map((t: any) => ({ id: t.id, label: t.label, icon: t.icon }))}
+                    onChange={setType}
+                    title="Тип события"
+                  />
                 </View>
               )}
 

@@ -13,6 +13,7 @@ import { dayCount, dayTotalMin } from '../logic/eventStats'
 import { animateLayout } from '../utils/animation'
 import { Card, Btn, KeyValueRow } from './ui'
 import SchedulePlanner from './SchedulePlanner'
+import SelectInput from './SelectInput'
 import { useTheme } from '../theme/ThemeProvider'
 import { useCommonStyles } from '../theme/commonStyles'
 
@@ -167,17 +168,16 @@ export default function StatsSection() {
           <Text style={[s.muted, s.small, { marginBottom: 10 }]}>По дням и средние за период (текущий день не учитывается).</Text>
 
           {usedEventTypes.length > 0 && (
-            <View style={[s.row, { marginBottom: 10, flexWrap: 'wrap' }]}>
-              <Pressable onPress={() => setMetric('sleep')} style={[s.chip, metric === 'sleep' && s.chipActive]}>
-                <Text style={[s.chipText, metric === 'sleep' && s.chipActiveText]}>😴 Сон</Text>
-              </Pressable>
-              {usedEventTypes.map(t => (
-                <Pressable key={t.id} onPress={() => setMetric(t.id)} style={[s.chip, metric === t.id && s.chipActive]}>
-                  <Text style={[s.chipText, metric === t.id && s.chipActiveText]}>
-                    {t.icon} {t.btnLabel || t.label}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={{ marginBottom: 10 }}>
+              <SelectInput
+                value={metric}
+                options={[
+                  { id: 'sleep', label: 'Сон', icon: '😴' },
+                  ...usedEventTypes.map(t => ({ id: t.id, label: t.btnLabel || t.label, icon: t.icon }))
+                ]}
+                onChange={setMetric}
+                title="Показатель"
+              />
             </View>
           )}
 

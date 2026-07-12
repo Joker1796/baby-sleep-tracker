@@ -17,7 +17,7 @@ export default function WakeChecklist({ items, wakeSince }: { items: ChecklistIt
 
   function eventsFor(item: ChecklistItem) {
     return events.filter(e => {
-      if (e.type !== item.type) return false
+      if (e.type !== item.type || e.planned) return false
       if (item.scope === 'wake' && wakeSince != null) return e.startedAt >= wakeSince
       return dayjs(e.startedAt).isSame(dayjs(now), 'day')
     })

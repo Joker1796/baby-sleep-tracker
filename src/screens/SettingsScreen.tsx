@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native'
+import * as Application from 'expo-application'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useChildrenStore, useActiveChild, Child } from '../store/children'
 import { useSettingsStore, ThemePref } from '../store/settings'
@@ -27,6 +28,11 @@ export default function SettingsScreen() {
   const napReminder = useSettingsStore(st => st.napReminder)
   const setNapReminder = useSettingsStore(st => st.setNapReminder)
   const [reminderNote, setReminderNote] = useState('')
+
+  // Версия и номер сборки — читаем из установленного бинарника,
+  // чтобы можно было убедиться, что обновление реально доставлено на устройство.
+  const appVersion = Application.nativeApplicationVersion ?? '—'
+  const buildVersion = Application.nativeBuildVersion ?? '—'
 
   async function toggleNapReminder() {
     if (napReminder) {
@@ -225,6 +231,9 @@ export default function SettingsScreen() {
             не заменяют консультацию педиатра.
           </Text>
           <Text style={[s.muted, s.small, { marginTop: 8 }]}>Работает офлайн · данные на устройстве</Text>
+          <Text style={[s.muted, s.small, { marginTop: 8 }]} accessibilityLabel={`Версия ${appVersion}, сборка ${buildVersion}`}>
+            Версия {appVersion} · сборка {buildVersion}
+          </Text>
         </Card>
       </ScrollView>
     </View>
